@@ -6,171 +6,161 @@
 // */
 
 #include <motion.h>
+#include "math.h"
 
 Motion::Motion(TIM_HandleTypeDef* PWMTim):
 mPWMTim(PWMTim)
+{}
+
+void Motion::acceleration() 						// Ускорение
 {
 
-}
+float deltaSpeed=mAcc/float(1000);
+uint32_t currentPeriod;
 
-Motion::acceleration() 						// Ускорение
+if (!mMotorOn) {mCurrentSpeed=0;}
+if (mSpeed+deltaSpeed<=mSpeed)																/* Пока скорость не достигла максимальной будем ускорятся */
 {
-deltaSpeed=acc/1000;
-flag=current_motor->Instance->CR1 & 1;
-if (!flag) {V=0;}
-	if (V+deltaV<=Vmax)																		/* Пока скорость не достигла максимальной будем ускорятся */
+	if (mMotorOn)																			/* Если мы двигались до этого, то увеличим скорость */
 	{
-		if (flag)																			/* Если мы двигались до этого, то увеличим скорость */
+		mCurrentSpeed=mSpeed+deltaSpeed;													/* Увеличение промежуточной скорости на один шаг */
+		currentPeriod=round(float(100000000)/mCurrentSpeed);
+
+		__HAL_TIM_SET_COMPARE(mPWMTim,TIM_CHANNEL_1,(currentPeriod)/2+1);					/* Установка скважности Шима */
+		__HAL_TIM_SET_AUTORELOAD(mPWMTim, currentPeriod);									/* Установка периода Шима */
+	}
+	else																					/* Если мы не двигались до этого, то увеличим скорость и включим мотор */
+	{
+		if (deltaSpeed>mSpeed)																/* Если шаг ускорения больше чем максимальная скорость, то */
 		{
-			V=V+deltaV;																		/* Увеличение промежуточной скорости на один шаг */
-			__HAL_TIM_SET_COMPARE(current_motor,TIM_CHANNEL_1,(100000000/V)/2+1);			/* Установка скважности Шима */
-			__HAL_TIM_SET_AUTORELOAD(current_motor, 100000000/V);							/* Установка периода Шима */
+			mCurrentSpeed=mSpeed;															/* Скорость сразу становится максимальной */
+			currentPeriod=round(mCurrentSpeed);
+
+			__HAL_TIM_SET_COMPARE(mPWMTim,TIM_CHANNEL_1,(currentPeriod)/2+1);				/* Установка скважности Шима */
+			__HAL_TIM_SET_AUTORELOAD(mPWMTim, currentPeriod);								/* Установка периода Шима */
+			HAL_TIM_PWM_Start(mPWMTim, TIM_CHANNEL_1);										/* Запуск мотора */
 		}
-		else																				/* Если мы не двигались до этого, то увеличим скорость и включим мотор */
+		else																				/* Если шаг ускорения меньше чем максимальная скорость, то */
 		{
-			if (deltaV>Vmax)																/* Если шаг ускорения больше чем максимальная скорость, то */
-			{
-				V=Vmax;																		/* Скорость сразу становится максимальной */
-				__HAL_TIM_SET_COMPARE(current_motor,TIM_CHANNEL_1,(100000000/V)/2+1);		/* Установка скважности Шима */
-				__HAL_TIM_SET_AUTORELOAD(current_motor, 100000000/V);						/* Установка периода Шима */
-				HAL_TIM_PWM_Start(current_motor, TIM_CHANNEL_1);								/* Запуск мотора */
-			}
-			else																			/* Если шаг ускорения меньше чем максимальная скорость, то */
-			{
-				V=deltaV;
-				__HAL_TIM_SET_COMPARE(current_motor,TIM_CHANNEL_1,(100000000/V)/2+1); 		/* Установка скважности Шима */
-				__HAL_TIM_SET_AUTORELOAD(current_motor, 100000000/V);						/* Установка периода Шима */
-				HAL_TIM_PWM_Start(current_motor, TIM_CHANNEL_1);								/* Запуск мотора */
-			}
+			mCurrentSpeed=deltaSpeed;
+			currentPeriod=round(mCurrentSpeed);
+			if (!currentPeriod) currentPeriod = 100000000;
+
+			__HAL_TIM_SET_COMPARE(mPWMTim,TIM_CHANNEL_1,(currentPeriod)/2+1);     			/* Установка скважности Шима */
+			__HAL_TIM_SET_AUTORELOAD(mPWMTim, currentPeriod);								/* Установка периода Шима */
+			HAL_TIM_PWM_Start(mPWMTim, TIM_CHANNEL_1);								        /* Запуск мотора */
+		}
+	}
+}
+}
+
+void Motion::deceleration()										/* Торможение */
+{
+	float deltaSpeed=mDcc/double(1000);
+	uint32_t currentPeriod;
+
+	if (mMotorOn)
+	{
+		if (mCurrentSpeed>deltaSpeed)																	/* Если дальше тормозить некуда, то */
+		{
+			mCurrentSpeed=mCurrentSpeed-deltaSpeed;																	/* Уменьшаем скорость на шаг */
+			currentPeriod=round(float(100000000)/mCurrentSpeed);
+
+			__HAL_TIM_SET_AUTORELOAD(mPWMTim, currentPeriod);						/* Установка периода Шима */
+			__HAL_TIM_SET_COMPARE(mPWMTim,TIM_CHANNEL_1,currentPeriod/2+1);			/* Установка скважности Шима */
+		}
+		else
+		{
+			HAL_TIM_PWM_Stop(mPWMTim, TIM_CHANNEL_1);								/* Выключение мотора */
 		}
 	}
 }
 
-void Motion::Deceleration(uint32_t Dcc)										/* Торможение */
+void Motion::moving (uint64_t movingSteps)										/* Равномерное движение */
 {
-deltaV=Dcc/1000;
-flag=current_motor->Instance->CR1 & 1;
-
-if (Stop_flag)
-{
-	V=100000000/(current_motor->Instance->ARR);
-	Stop_flag=!Stop_flag;
-}
-
-if (flag)
-{
-	if (V>deltaV)																	/* Если дальше тормозить некуда, то */
+	if (mMotorOn)
 	{
-		V=V-deltaV;																	/* Уменьшаем скорость на шаг */
-		__HAL_TIM_SET_AUTORELOAD(current_motor, 100000000/V);						/* Установка периода Шима */
-		__HAL_TIM_SET_COMPARE(current_motor,TIM_CHANNEL_1,100000000/V/2+1);			/* Установка скважности Шима */
-	}
-	else
-	{
-		HAL_TIM_PWM_Stop(current_motor, TIM_CHANNEL_1);								/* Выключение мотора */
-		Stop_flag=!Stop_flag;
-	}
-}
-}
-
-void Moving (uint32_t M_Steps)										/* Равномерное движение */
-{
-flag=current_motor->Instance->CR1 & 1;
-
-if (flag)
-{
-	if (Moving_flag)
-	{
-		V=100000000/(mPWMTim->Instance->ARR);
-		Moving_Time=M_Steps;
-		Moving_Time=Moving_Time*1000;
-		Moving_Time=Moving_Time/V;
-		Moving_flag=!Moving_flag;
-	}
-
-	(Moving_Time>0) ? Moving_Time-- :	Moving_flag=!Moving_flag;
-}
-}
-
-void jogging(uint32_t Vmax,uint32_t Acc)								/* Движение при нажатой кнопке */
-{
-deltaV=Acc/1000;
-
-
-flag=current_motor->Instance->CR1 & 1;
-
-if (!flag)
-{
-	V=0;
-}
-
-if (V>0 || HAL_GPIO_ReadPin(TRS_FINE_GPIO_Port, TRS_FINE_Pin)==GPIO_PIN_RESET)																/* Пока скорость больше нуля или нажата кнопка */ 		/*!!!!!!!!!!!!! Необходимо вписать номер порта и пина для кнопки!!!!!!!!!!!!!!!!! */
-{
-	if (HAL_GPIO_ReadPin(TRS_FINE_GPIO_Port, TRS_FINE_Pin)==GPIO_PIN_RESET)																		/* Если кнопка нажата */								/*!!!!!!!!!!!!! Необходимо вписать номер порта и пина для кнопки!!!!!!!!!!!!!!!!! */
-	{
-		if (V>0)																			/* Проверка стартуем ли мы, нужно ли включать моторы */
+		if (!mNeedMoving)
 		{
-			if (V<=Vmax)
+			mMovingTime=movingSteps*1000;
+			mMovingTime=mMovingTime/uint64_t(round(mCurrentSpeed));
+			mNeedMoving=true;
+		}
+		(mMovingTime>0) ? mMovingTime-- :	mNeedMoving=false;
+	}
+}
+
+void Motion::jogging()								/* Движение при нажатой кнопке */
+{
+float deltaSpeedAcc=mAcc/double(1000);
+float deltaSpeedDcc=mDcc/double(1000);
+uint32_t currentPeriod;
+
+if (!mMotorOn) {mCurrentSpeed=0;}
+
+if (mCurrentSpeed>0 || HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13)==GPIO_PIN_RESET)																/* Пока скорость больше нуля или нажата кнопка */ 		/*!!!!!!!!!!!!! Необходимо вписать номер порта и пина для кнопки!!!!!!!!!!!!!!!!! */
+{
+	if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13)==GPIO_PIN_RESET)																		/* Если кнопка нажата */								/*!!!!!!!!!!!!! Необходимо вписать номер порта и пина для кнопки!!!!!!!!!!!!!!!!! */
+	{
+		if (mCurrentSpeed>0)																			/* Проверка стартуем ли мы, нужно ли включать моторы */
+		{
+			if (mCurrentSpeed<=mSpeed)
 			{
-				V=V+deltaV;																	/* То ускоряемся */
-				__HAL_TIM_SET_COMPARE(current_motor,TIM_CHANNEL_1,100000000/V/2+1);			/* Установка скважности Шима */
-				__HAL_TIM_SET_AUTORELOAD(current_motor, 100000000/V);						/* Установка периода Шима */
+				mCurrentSpeed=mCurrentSpeed+deltaSpeedAcc;																	/* То ускоряемся */
+				currentPeriod=round(float(100000000)/mCurrentSpeed);
+
+				__HAL_TIM_SET_COMPARE(mPWMTim,TIM_CHANNEL_1,currentPeriod/2+1);			/* Установка скважности Шима */
+				__HAL_TIM_SET_AUTORELOAD(mPWMTim, currentPeriod);						/* Установка периода Шима */
 			}
 			else
 			{
-				V=Vmax;																		/* То скорость равна максимальной */
-				__HAL_TIM_SET_COMPARE(current_motor,TIM_CHANNEL_1,100000000/V/2+1);			/* Установка скважности Шима */
-				__HAL_TIM_SET_AUTORELOAD(current_motor, 100000000/V);						/* Установка периода Шима */
+				mCurrentSpeed=mSpeed;																		/* То скорость равна максимальной */
+				currentPeriod=round(float(100000000)/mCurrentSpeed);
+
+				__HAL_TIM_SET_COMPARE(mPWMTim,TIM_CHANNEL_1,currentPeriod/2+1);			/* Установка скважности Шима */
+				__HAL_TIM_SET_AUTORELOAD(mPWMTim, currentPeriod);						/* Установка периода Шима */
 			}
 		}
 		else																				/* Старт */
 		{
-			if (deltaV>=Vmax)																/* Если шаг больше чем максимальная скорость, то */
+			if (deltaSpeedAcc>=mSpeed)																/* Если шаг больше чем максимальная скорость, то */
 			{
-				V=Vmax;																		/* скорость равна максимальной */
-				__HAL_TIM_SET_COMPARE(current_motor,TIM_CHANNEL_1,100000000/V/2+1);			/* Установка скважности Шима */
-				__HAL_TIM_SET_AUTORELOAD(current_motor, 100000000/V);						/* Установка периода Ш�?Ма */
-				HAL_TIM_PWM_Start(current_motor, TIM_CHANNEL_1);								/* Запуск мотора */
+				mCurrentSpeed=mSpeed;																		/* скорость равна максимальной */
+				currentPeriod=round(float(100000000)/mCurrentSpeed);
+
+				__HAL_TIM_SET_COMPARE(mPWMTim,TIM_CHANNEL_1,currentPeriod/2+1);			/* Установка скважности Шима */
+				__HAL_TIM_SET_AUTORELOAD(mPWMTim, currentPeriod);						/* Установка периода Ш�?Ма */
+				HAL_TIM_PWM_Start(mPWMTim, TIM_CHANNEL_1);								/* Запуск мотора */
 			}
 			else																			/* Если шаг меньше чем максимальная скорость, то */
 			{
-				V=deltaV;																	/* Увеличиваем скорость на один шаг */
-				__HAL_TIM_SET_COMPARE(current_motor,TIM_CHANNEL_1,100000000/V/2+1);			/* Установка скважности Шима */
-				__HAL_TIM_SET_AUTORELOAD(current_motor, 100000000/V);						/* Установка периода Ш�?Ма */
-				HAL_TIM_PWM_Start(current_motor, TIM_CHANNEL_1);								/* Запуск мотора */
+				mCurrentSpeed=deltaSpeedAcc;																	/* Увеличиваем скорость на один шаг */
+				currentPeriod=round(float(100000000)/mCurrentSpeed);
+
+				__HAL_TIM_SET_COMPARE(mPWMTim,TIM_CHANNEL_1,currentPeriod/2+1);			/* Установка скважности Шима */
+				__HAL_TIM_SET_AUTORELOAD(mPWMTim, currentPeriod);						/* Установка периода Ш�?Ма */
+				HAL_TIM_PWM_Start(mPWMTim, TIM_CHANNEL_1);								/* Запуск мотора */
 			}
 		}
 	}
 	else																					/* Если кнопка не нажата и мы все ещё движемся */
 	{
-		if (V>deltaV)
+		if (mCurrentSpeed>deltaSpeedDcc)
 		{
-			V=V-deltaV;																		/* Замедляемся */
-			__HAL_TIM_SET_AUTORELOAD(current_motor, 100000000/V);							/* Установка периода Шима */
-			__HAL_TIM_SET_COMPARE(current_motor,TIM_CHANNEL_1,100000000/V/2+1);				/* Установка скважности Шима */
+			mCurrentSpeed=mCurrentSpeed-deltaSpeedDcc;																		/* Замедляемся */
+			__HAL_TIM_SET_AUTORELOAD(mPWMTim, currentPeriod);							/* Установка периода Шима */
+			__HAL_TIM_SET_COMPARE(mPWMTim,TIM_CHANNEL_1,currentPeriod/2+1);				/* Установка скважности Шима */
 		}
 		else
 		{
-			HAL_TIM_PWM_Stop(current_motor, TIM_CHANNEL_1);									/* Выключаем мотор */
-			V=0;																			/* Необходимо чтобы выйти из цикла */
+			HAL_TIM_PWM_Stop(mPWMTim, TIM_CHANNEL_1);									/* Выключаем мотор */
+			mCurrentSpeed=0;																			/* Необходимо чтобы выйти из цикла */
 		}
 	}
 }
 }
 
-void direction(bool DIR)
-{
-		if (DIR)
-		{
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_SET);
-		}
-		else
-		{
-			HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
-		}
-}
-
-Motion::setSpeed(float newSpeed)
+void Motion::setSpeed(float newSpeed)
 {
 	if (fabs(newSpeed) > 1000000)
 	{
@@ -179,3 +169,7 @@ Motion::setSpeed(float newSpeed)
 	mSpeed = newSpeed;
 }
 
+float Motion::getSpeed()
+{
+	return mSpeed;
+}

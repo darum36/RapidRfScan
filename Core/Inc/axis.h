@@ -10,29 +10,59 @@
 
 #include <motion.h>
 
+enum class eDirection
+{
+	Positive,
+	Negative
+};
+
 class Axis
 {
 public:
 
-	Axis(TIM_TypeDef* PWMTim, GPIO_TypeDef port, uint16_t pin, uint8_t afMaping,              // PWM
-		TIM_TypeDef* EncTim,  GPIO_TypeDef portEncA, uint16_t pinEncA, uint8_t afMapingEncA,     // TIM ENCA
-							  GPIO_TypeDef portEncB, uint16_t pinEncB, uint8_t afMapingEncB,	  // TIM ENCB																              // GPIO DIR
+	Axis(TIM_TypeDef* PWMTim, GPIO_TypeDef portPWM, uint16_t pinPWM, uint8_t afMapingPWM,             		 	// PWM
+		TIM_TypeDef* EncTim,  GPIO_TypeDef portEncA, uint16_t pinEncA, uint8_t afMapingEncA,    		 // TIM ENCA
+							  GPIO_TypeDef portEncB, uint16_t pinEncB, uint8_t afMapingEncB,					  // TIM ENCB																              // GPIO DIR
 		GPIO_TypeDef portLimPlus, uint16_t	pinLimPlus, GPIO_TypeDef portLimMinus, uint16_t pinLimMinus,     // GPIOs LIMIT
-		GPIO_TypeDef portLimHome, uint16_t	pinLimHome
-																			                  //
-
-
-		);
+		GPIO_TypeDef portLimHome, uint16_t	pinLimHome,
+		GPIO_TypeDef portDir, uint16_t	pinDir);
 	virtual ~Axis()=default;
 
+	void setDirection(eDirection dir);
+
 private:
+
 	TIM_TypeDef* mPwmTimTypeDef;
 	TIM_HandleTypeDef mPWMTim;
 
-	Motion mMotion;
-	GPIO_TypeDef mPort;
-	uint16_t mPin;
-	uint8_t mAfMaping;
+	GPIO_TypeDef gPwmPort;
+	uint16_t 	 gPwmPin;
+	uint8_t 	 gAfMapingPWM;
+
+	TIM_TypeDef* mEncTimTypeDef;
+	TIM_HandleTypeDef mEncTim;
+
+	GPIO_TypeDef gEncAPort;
+	uint16_t 	 gEncAPin;
+	uint8_t 	 gAfMapingEncA;
+
+	GPIO_TypeDef gEncBPort;
+	uint16_t     gEncBPin;
+	uint8_t 	 gAfMapingEncB;
+
+	GPIO_TypeDef gLimPlusPort;
+	uint16_t     gLimPlusPin;
+
+	GPIO_TypeDef gLimMinusPort;
+	uint16_t 	 gLimMinusPin;
+
+	GPIO_TypeDef gLimHomePort;
+	uint16_t 	 gLimHomePin;
+
+	GPIO_TypeDef gDirPort;
+	uint16_t 	 gDirPin;
+
+	Motion 	  	 mMotion;
 
 	void init();
 };

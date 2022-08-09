@@ -32,15 +32,18 @@ public:
 	float getSpeed();
 
 private:
+
 	void acceleration();
-	void decelerarion();
-	void moving();
-	void direction();
+	void deceleration();
+	void moving(uint64_t movingSteps);
 
 	float mSpeed;
 	float mCurrentSpeed;
 	float mAcc;
 	float mDcc;
+	bool mMotorOn=mPWMTim->Instance->CR1 & 1;
+	bool mNeedMoving=false;
+	uint64_t mMovingTime=0;
 
 	TIM_HandleTypeDef* mPWMTim;
 };
