@@ -30,6 +30,10 @@ public:
 
 	void setSpeed(float newSpeed);
 	float getSpeed();
+	void setAcc(float newAcc);
+	float getAcc();
+	void setDcc(float newDcc);
+	float getDcc();
 
 private:
 

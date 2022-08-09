@@ -28,7 +28,10 @@ public:
 		GPIO_TypeDef portDir, uint16_t	pinDir);
 	virtual ~Axis()=default;
 
+	void jogging(eDirection dir);
 	void setDirection(eDirection dir);
+
+	void tempSetParam(float newSpeed, float newAcc, float newDcc);
 
 private:
 

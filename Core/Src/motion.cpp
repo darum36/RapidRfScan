@@ -173,3 +173,31 @@ float Motion::getSpeed()
 {
 	return mSpeed;
 }
+
+void Motion::setAcc(float newAcc)
+{
+	if (fabs(newAcc) > 1000000)
+	{
+		newAcc = newAcc < 0 ? -1000000 : 1000000;
+	}
+	mAcc = newAcc;
+}
+
+float Motion::getAcc()
+{
+	return mAcc;
+}
+
+void Motion::setDcc(float newDcc)
+{
+	if (fabs(newDcc) > 1000000)
+	{
+		newDcc = newDcc < 0 ? -1000000 : 1000000;
+	}
+	mDcc = newDcc;
+}
+
+float Motion::getDcc()
+{
+	return mDcc;
+}

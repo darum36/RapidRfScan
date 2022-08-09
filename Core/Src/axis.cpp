@@ -45,6 +45,18 @@ void Axis::setDirection(eDirection dir)
 		}
 }
 
+void Axis::jogging(eDirection dir)
+{
+	setDirection(dir);
+	mMotion.jogging();
+}
+
+void Axis::tempSetParam(float newSpeed, float newAcc, float newDcc)
+{
+	mMotion.setSpeed(newSpeed);
+	mMotion.setAcc(newAcc);
+	mMotion.setDcc(newDcc);
+}
 void Axis::init()
 {
 /* Шим сигнал  */
