@@ -76,21 +76,21 @@ static void MX_USART1_UART_Init(void);
 uint32_t tempCount;
 
 /* USER CODE BEGIN PFP */
-Motor MotorX(1);
+//Motor MotorX(1);
 void TIM1_UP_TIM10_IRQHandler(void) //Прерывание раз в 1 мс
 {
   /* USER CODE BEGIN TIM1_UP_TIM10_IRQn 0 */
-	if (motor_motion == 1) //конечному автомату XBG
-	{
-		if (MM_int_data == 0)
-		{
-			MotorX.Point_to_Point(1000000, 1000000, 10000000);
-		}
-		else
-		{
-			MotorX.Jogging(SP_int_data,AC_int_data);
-		}
-	}
+//	if (motor_motion == 1) //конечному автомату XBG
+//	{
+//		if (MM_int_data == 0)
+//		{
+//			MotorX.Point_to_Point(1000000, 1000000, 10000000);
+//		}
+//		else
+//		{
+//			MotorX.Jogging(SP_int_data,AC_int_data);
+//		}
+//	}
   /* USER CODE END TIM1_UP_TIM10_IRQn 0 */
   HAL_TIM_IRQHandler(&htim1);
   HAL_TIM_IRQHandler(&htim10);
