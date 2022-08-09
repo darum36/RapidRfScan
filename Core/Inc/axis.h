@@ -14,7 +14,15 @@ class Axis
 {
 public:
 
-	Axis(TIM_TypeDef* PWMTim, GPIO_TypeDef port, uint16_t pin, uint8_t afMaping);
+	Axis(TIM_TypeDef* PWMTim, GPIO_TypeDef port, uint16_t pin, uint8_t afMaping,              // PWM
+		TIM_TypeDef* EncTim,  GPIO_TypeDef portEncA, uint16_t pinEncA, uint8_t afMapingEncA,     // TIM ENCA
+							  GPIO_TypeDef portEncB, uint16_t pinEncB, uint8_t afMapingEncB,	  // TIM ENCB																              // GPIO DIR
+		GPIO_TypeDef portLimPlus, uint16_t	pinLimPlus, GPIO_TypeDef portLimMinus, uint16_t pinLimMinus,     // GPIOs LIMIT
+		GPIO_TypeDef portLimHome, uint16_t	pinLimHome
+																			                  //
+
+
+		);
 	virtual ~Axis()=default;
 
 private:
