@@ -19,8 +19,8 @@ UART_HandleTypeDef huart1;
 
 void startMotion()
 {
-	void initMotion();
-	void initUart();
+	initMotion();
+	initUart();
 
 	while (1)
 	{}
