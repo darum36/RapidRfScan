@@ -10,7 +10,10 @@
 
 Motion::Motion(TIM_HandleTypeDef* PWMTim):
 mPWMTim(PWMTim)
-{}
+{
+	mNeedMoving = false;
+	mMovingTime = 0;
+}
 
 void Motion::acceleration() 						// Ускорение
 {
@@ -18,10 +21,10 @@ void Motion::acceleration() 						// Ускорение
 float deltaSpeed=mAcc/float(1000);
 uint32_t currentPeriod;
 
-if (!mMotorOn) {mCurrentSpeed=0;}
+if (!motorOn()) {mCurrentSpeed=0;}
 if (mSpeed+deltaSpeed<=mSpeed)																/* Пока скорость не достигла максимальной будем ускорятся */
 {
-	if (mMotorOn)																			/* Если мы двигались до этого, то увеличим скорость */
+	if (motorOn())																			/* Если мы двигались до этого, то увеличим скорость */
 	{
 		mCurrentSpeed=mSpeed+deltaSpeed;													/* Увеличение промежуточной скорости на один шаг */
 		currentPeriod=round(float(100000000)/mCurrentSpeed);
@@ -59,7 +62,7 @@ void Motion::deceleration()										/* Торможение */
 	float deltaSpeed=mDcc/double(1000);
 	uint32_t currentPeriod;
 
-	if (mMotorOn)
+	if (motorOn())
 	{
 		if (mCurrentSpeed>deltaSpeed)																	/* Если дальше тормозить некуда, то */
 		{
@@ -78,7 +81,7 @@ void Motion::deceleration()										/* Торможение */
 
 void Motion::moving (uint64_t movingSteps)										/* Равномерное движение */
 {
-	if (mMotorOn)
+	if (motorOn())
 	{
 		if (!mNeedMoving)
 		{
@@ -90,13 +93,18 @@ void Motion::moving (uint64_t movingSteps)										/* Равномерное д
 	}
 }
 
+bool Motion::motorOn()
+{
+	return (mPWMTim->Instance->CR1 & 1) ? true : false;
+}
+
 void Motion::jogging()								/* Движение при нажатой кнопке */
 {
 float deltaSpeedAcc=mAcc/double(1000);
 float deltaSpeedDcc=mDcc/double(1000);
 uint32_t currentPeriod;
 
-if (!mMotorOn) {mCurrentSpeed=0;}
+if (!motorOn()) {mCurrentSpeed=0;}
 
 if (mCurrentSpeed>0 || HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13)==GPIO_PIN_RESET)																/* Пока скорость больше нуля или нажата кнопка */ 		/*!!!!!!!!!!!!! Необходимо вписать номер порта и пина для кнопки!!!!!!!!!!!!!!!!! */
 {
@@ -148,6 +156,7 @@ if (mCurrentSpeed>0 || HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13)==GPIO_PIN_RESET)				
 		if (mCurrentSpeed>deltaSpeedDcc)
 		{
 			mCurrentSpeed=mCurrentSpeed-deltaSpeedDcc;																		/* Замедляемся */
+			currentPeriod=round(float(100000000)/mCurrentSpeed);
 			__HAL_TIM_SET_AUTORELOAD(mPWMTim, currentPeriod);							/* Установка периода Шима */
 			__HAL_TIM_SET_COMPARE(mPWMTim,TIM_CHANNEL_1,currentPeriod/2+1);				/* Установка скважности Шима */
 		}
@@ -162,9 +171,9 @@ if (mCurrentSpeed>0 || HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13)==GPIO_PIN_RESET)				
 
 void Motion::setSpeed(float newSpeed)
 {
-	if (fabs(newSpeed) > 1000000)
+	if (fabs(newSpeed) > 10000000)
 	{
-		newSpeed = newSpeed < 0 ? -1000000 : 1000000;
+		newSpeed = newSpeed < 0 ? -10000000 : 10000000;
 	}
 	mSpeed = newSpeed;
 }

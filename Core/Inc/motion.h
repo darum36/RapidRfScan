@@ -40,14 +40,15 @@ private:
 	void acceleration();
 	void deceleration();
 	void moving(uint64_t movingSteps);
+	bool motorOn();
 
 	float mSpeed;
 	float mCurrentSpeed;
 	float mAcc;
 	float mDcc;
-	bool mMotorOn=mPWMTim->Instance->CR1 & 1;
-	bool mNeedMoving=false;
-	uint64_t mMovingTime=0;
+
+	bool mNeedMoving;
+	uint64_t mMovingTime;
 
 	TIM_HandleTypeDef* mPWMTim;
 };

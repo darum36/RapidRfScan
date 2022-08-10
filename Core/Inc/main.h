@@ -28,6 +28,8 @@ extern "C" {
 
 #include "stm32f4xx_hal.h"
 
+void TIM1_UP_TIM10_IRQHandler(void);
+
 #ifdef __cplusplus
 }
 #endif

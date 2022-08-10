@@ -8,6 +8,8 @@
 #ifndef INC_INITIALIZEHARDWARE_H_
 #define INC_INITIALIZEHARDWARE_H_
 
+void Error_Handler(void);
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -17,7 +19,7 @@ extern "C" {
 void initHardware();
 
 void SystemClock_Config(void);
-void Error_Handler(void);
+
 
 #define TRS_FINE_Pin GPIO_PIN_13
 #define TRS_FINE_GPIO_Port GPIOC

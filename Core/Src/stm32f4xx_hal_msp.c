@@ -142,17 +142,17 @@ void HAL_CRC_MspDeInit(CRC_HandleTypeDef* hcrc)
 void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
 {
 
-  if(htim_base->Instance==TIM10)
-  {
-    __HAL_RCC_TIM10_CLK_ENABLE();
-
-    HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, 0, 4);
-    HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
-  }
-  else if(htim_base->Instance==TIM11)
-  {
-
-  }
+//  if(htim_base->Instance==TIM10)
+//  {
+//    __HAL_RCC_TIM10_CLK_ENABLE();
+//
+//    HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, 0, 4);
+//    HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
+//  }
+//  else if(htim_base->Instance==TIM11)
+//  {
+//
+//  }
 
 }
 
@@ -191,7 +191,7 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* htim_base)
   }
   else if(htim_base->Instance==TIM11)
   {
-    __HAL_RCC_TIM11_CLK_DISABLE();
+//    __HAL_RCC_TIM11_CLK_DISABLE();
   }
 }
 /**

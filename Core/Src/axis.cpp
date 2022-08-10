@@ -10,14 +10,14 @@
 extern void Error_Handler();
 
 Axis::Axis(TIM_TypeDef* PWMTim,
-		   GPIO_TypeDef portPWM, uint16_t pinPWM, uint8_t afMapingPWM,
+		   GPIO_TypeDef* portPWM, uint16_t pinPWM, uint8_t afMapingPWM,
 		   TIM_TypeDef* EncTim,
-		   GPIO_TypeDef portEncA, uint16_t pinEncA, uint8_t afMapingEncA,
-		   GPIO_TypeDef portEncB, uint16_t pinEncB, uint8_t afMapingEncB,
-		   GPIO_TypeDef portLimPlus, uint16_t	pinLimPlus,
-		   GPIO_TypeDef portLimMinus, uint16_t pinLimMinus,
-		   GPIO_TypeDef portLimHome, uint16_t	pinLimHome,
-		   GPIO_TypeDef portDir, uint16_t	pinDir):
+		   GPIO_TypeDef* portEncA, uint16_t pinEncA, uint8_t afMapingEncA,
+		   GPIO_TypeDef* portEncB, uint16_t pinEncB, uint8_t afMapingEncB,
+		   GPIO_TypeDef* portLimPlus, uint16_t	pinLimPlus,
+		   GPIO_TypeDef* portLimMinus, uint16_t pinLimMinus,
+		   GPIO_TypeDef* portLimHome, uint16_t	pinLimHome,
+		   GPIO_TypeDef* portDir, uint16_t	pinDir):
 
 	mPwmTimTypeDef(PWMTim),
 	gPwmPort(portPWM), gPwmPin(pinPWM), gAfMapingPWM(afMapingPWM),
@@ -37,11 +37,11 @@ void Axis::setDirection(eDirection dir)
 {
 		if (dir == eDirection::Positive)
 		{
-			HAL_GPIO_WritePin(&gDirPort, gDirPin, GPIO_PIN_SET);
+			HAL_GPIO_WritePin(gDirPort, gDirPin, GPIO_PIN_SET);
 		}
 		else
 		{
-			HAL_GPIO_WritePin(&gDirPort, gDirPin, GPIO_PIN_RESET);
+			HAL_GPIO_WritePin(gDirPort, gDirPin, GPIO_PIN_RESET);
 		}
 }
 
@@ -96,7 +96,7 @@ void Axis::init()
 	GPIO_InitStruct.Pull = GPIO_NOPULL;
 	GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
 	GPIO_InitStruct.Alternate = gAfMapingPWM;
-	HAL_GPIO_Init(&gPwmPort, &GPIO_InitStruct);
+	HAL_GPIO_Init(gPwmPort, &GPIO_InitStruct);
 
 	/* Энкодер  */
 	TIM_Encoder_InitTypeDef sConfig = {0};
@@ -136,7 +136,7 @@ void Axis::init()
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = gAfMapingEncA;
-    HAL_GPIO_Init(&gEncAPort, &GPIO_InitStruct);
+    HAL_GPIO_Init(gEncAPort, &GPIO_InitStruct);
 
 	GPIO_InitStruct = {0};
 
@@ -145,28 +145,28 @@ void Axis::init()
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
     GPIO_InitStruct.Alternate = gAfMapingEncB;
-    HAL_GPIO_Init(&gEncBPort, &GPIO_InitStruct);
+    HAL_GPIO_Init(gEncBPort, &GPIO_InitStruct);
 
     GPIO_InitStruct = {0};
 
     GPIO_InitStruct.Pin = gLimPlusPin;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(&gLimPlusPort, &GPIO_InitStruct);
+    HAL_GPIO_Init(gLimPlusPort, &GPIO_InitStruct);
 
     GPIO_InitStruct = {0};
 
     GPIO_InitStruct.Pin = gLimMinusPin;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(&gLimMinusPort, &GPIO_InitStruct);
+    HAL_GPIO_Init(gLimMinusPort, &GPIO_InitStruct);
 
     GPIO_InitStruct = {0};
 
     GPIO_InitStruct.Pin = gLimHomePin;
     GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(&gLimHomePort, &GPIO_InitStruct);
+    HAL_GPIO_Init(gLimHomePort, &GPIO_InitStruct);
 
     GPIO_InitStruct = {0};
 
@@ -174,7 +174,8 @@ void Axis::init()
     GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
-    HAL_GPIO_Init(&gDirPort, &GPIO_InitStruct);
+    HAL_GPIO_Init(gDirPort, &GPIO_InitStruct);
+
 }
 
 

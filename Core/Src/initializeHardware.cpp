@@ -9,8 +9,8 @@
 
 ADC_HandleTypeDef hadc1;
 CRC_HandleTypeDef hcrc;
-TIM_HandleTypeDef htim10;
-UART_HandleTypeDef huart1;
+extern TIM_HandleTypeDef htim10;
+extern UART_HandleTypeDef huart1;
 
 static void MX_GPIO_Init(void);
 static void MX_ADC1_Init(void);
@@ -47,6 +47,8 @@ void initHardware()
 	MX_USART1_UART_Init();
 
 	//Start 1ms tim
+    HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, 0, 4);
+    HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
 	HAL_TIM_Base_Start_IT(&htim10);
 }
 
