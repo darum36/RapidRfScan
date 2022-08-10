@@ -19,6 +19,7 @@
 /* USER CODE END Header */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
+
 #ifndef __MAIN_H
 #define __MAIN_H
 
@@ -27,8 +28,6 @@ extern "C" {
 #endif
 
 #include "stm32f4xx_hal.h"
-
-void TIM1_UP_TIM10_IRQHandler(void);
 
 #ifdef __cplusplus
 }

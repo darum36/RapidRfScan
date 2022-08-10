@@ -379,7 +379,7 @@ void command(UART_HandleTypeDef *huart, uint8_t TX_data[], int len)
 	}
 
 }
-void axis(UART_HandleTypeDef *huart, uint8_t TX_data[], int len)
+void getAxes(UART_HandleTypeDef *huart, uint8_t TX_data[], int len)
 {
 	switch (TX_data[0])
 	{
@@ -464,7 +464,7 @@ void UART(UART_HandleTypeDef *huart)
 					  {
 						TX_data[i] = Buffer.read();
 					  }
-					  axis(huart,TX_data,len);
+					  getAxes(huart,TX_data,len);
 					  //HAL_UART_Transmit_IT(huart, TX_data, len);
 
 					  delete [] TX_data;

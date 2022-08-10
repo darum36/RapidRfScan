@@ -2,36 +2,17 @@
  * axis.cpp
  *
  *  Created on: Aug 8, 2022
- *      Author: Kocherov
+ *      Author: Kocherov I.O.
  */
 
 #include <axis.h>
 
 extern void Error_Handler();
 
-Axis::Axis(TIM_TypeDef* PWMTim,
-		   GPIO_TypeDef* portPWM, uint16_t pinPWM, uint8_t afMapingPWM,
-		   TIM_TypeDef* EncTim,
-		   GPIO_TypeDef* portEncA, uint16_t pinEncA, uint8_t afMapingEncA,
-		   GPIO_TypeDef* portEncB, uint16_t pinEncB, uint8_t afMapingEncB,
-		   GPIO_TypeDef* portLimPlus, uint16_t	pinLimPlus,
-		   GPIO_TypeDef* portLimMinus, uint16_t pinLimMinus,
-		   GPIO_TypeDef* portLimHome, uint16_t	pinLimHome,
-		   GPIO_TypeDef* portDir, uint16_t	pinDir):
-
-	mPwmTimTypeDef(PWMTim),
-	gPwmPort(portPWM), gPwmPin(pinPWM), gAfMapingPWM(afMapingPWM),
-	mEncTimTypeDef(EncTim),
-	gEncAPort(portEncA), gEncAPin(pinEncA), gAfMapingEncA(afMapingEncA),
-	gEncBPort(portEncB), gEncBPin(pinEncB), gAfMapingEncB(afMapingEncB),
-	gLimPlusPort(portLimPlus), gLimPlusPin(pinLimPlus),
-	gLimMinusPort(portLimMinus), gLimMinusPin(pinLimMinus),
-	gLimHomePort(portLimHome), gLimHomePin(pinLimHome),
-	gDirPort(portDir), gDirPin(pinDir),
-	mMotion(&mPWMTim)
+Axis::Axis():mMotion(&mPWMTim)
 {
-	init();
-}
+
+};
 
 void Axis::setDirection(eDirection dir)
 {
@@ -57,9 +38,44 @@ void Axis::tempSetParam(float newSpeed, float newAcc, float newDcc)
 	mMotion.setAcc(newAcc);
 	mMotion.setDcc(newDcc);
 }
-void Axis::init()
+
+void Axis::tempDefaultParam()
 {
-/* Шим сигнал  */
+	mMotion.setSpeed(1000000);
+	mMotion.setAcc(1000000);
+	mMotion.setDcc(1000000);
+}
+
+void Axis::init(TIM_TypeDef* PWMTim, GPIO_TypeDef* portPWM, uint16_t pinPWM, uint8_t afMapingPWM,             		 	// PWM
+		TIM_TypeDef* EncTim,  GPIO_TypeDef* portEncA, uint16_t pinEncA, uint8_t afMapingEncA,    		 				// TIM ENCA
+							  GPIO_TypeDef* portEncB, uint16_t pinEncB, uint8_t afMapingEncB,					 		// TIM ENCB																              // GPIO DIR
+		GPIO_TypeDef* portLimPlus, uint16_t	pinLimPlus, GPIO_TypeDef* portLimMinus, uint16_t pinLimMinus,    			// GPIOs LIMIT
+		GPIO_TypeDef* portLimHome, uint16_t	pinLimHome,
+		GPIO_TypeDef* portDir, uint16_t	pinDir)
+{
+
+	mPwmTimTypeDef=PWMTim;
+	gPwmPort=portPWM;
+	gPwmPin=pinPWM;
+	gAfMapingPWM=afMapingPWM;
+	mEncTimTypeDef=EncTim;
+	gEncAPort=portEncA;
+	gEncAPin=pinEncA;
+	gAfMapingEncA=afMapingEncA;
+	gEncBPort=portEncB;
+	gEncBPin=pinEncB;
+	gAfMapingEncB=afMapingEncB;
+	gLimPlusPort=portLimPlus;
+	gLimPlusPin=pinLimPlus;
+	gLimMinusPort=portLimMinus;
+	gLimMinusPin=pinLimMinus;
+	gLimHomePort=portLimHome;
+	gLimHomePin=pinLimHome;
+	gDirPort=portDir;
+	gDirPin=pinDir;
+	Motion mMotion(&mPWMTim);
+
+	/* Шим сигнал  */
 
 	TIM_MasterConfigTypeDef sMasterConfig = {0};
 	TIM_OC_InitTypeDef sConfigOC = {0};
@@ -177,5 +193,3 @@ void Axis::init()
     HAL_GPIO_Init(gDirPort, &GPIO_InitStruct);
 
 }
-
-

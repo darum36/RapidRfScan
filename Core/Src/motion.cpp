@@ -2,7 +2,7 @@
 // * motion.cpp
 // *
 // *  Created on: Aug 8, 2022
-// *      Author: Kocherov
+// *      Author: Kocherov I.O.
 // */
 
 #include <motion.h>
