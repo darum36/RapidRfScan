@@ -12,9 +12,11 @@ extern void Error_Handler();
 Axis::Axis():mMotion(&mPWMTim)
 {
 	tempStatus = 0;
-	perPosMoving=0;
-	permNegMoving=0;
-	homecome=0;
+	perPosMoving= false;
+	permNegMoving= false ;
+	homecome= false;
+	ableMoving= false;
+	inverseLim=false;
 };
 
 short Axis::getLimStatus()
@@ -23,27 +25,47 @@ short Axis::getLimStatus()
 	short indMinusPlus = 1;
 	short indHomePlus = 2;
 
-	short limPlusStatus = (HAL_GPIO_ReadPin(gLimPlusPort, gLimPlusPin) == GPIO_PIN_SET) ? 1 : 0;
-	short limMinusStatus=HAL_GPIO_ReadPin(gLimMinusPort, gLimMinusPin);
-	short limHomeStatus=HAL_GPIO_ReadPin(gLimHomePort, gLimHomePin);
+	short limPlusStatus = (HAL_GPIO_ReadPin(gLimPlusPort, gLimPlusPin) == GPIO_PIN_SET) ? 0 : 1;
+	short limMinusStatus = (HAL_GPIO_ReadPin(gLimMinusPort, gLimMinusPin)== GPIO_PIN_SET) ? 0 : 1;
+	short limHomeStatus = (HAL_GPIO_ReadPin(gLimHomePort, gLimHomePin)== GPIO_PIN_SET) ? 0 : 1;
 
 	if (limPlusStatus) tempStatus|=(1<<indLimPlus);
-	if (limMinusStatus) { tempStatus=tempStatus&(1<<indMinusPlus);}
-	if (limHomeStatus) { tempStatus=tempStatus&(1<<indHomePlus);}
+	if (limMinusStatus) tempStatus=tempStatus&(1<<indMinusPlus);
+	if (limHomeStatus) tempStatus=tempStatus&(1<<indHomePlus);
 
 	return tempStatus;
 }
 
 void Axis::checkLimits()
 {
-	short limPlusStatus = (HAL_GPIO_ReadPin(gLimPlusPort, gLimPlusPin) == GPIO_PIN_SET) ? 1 : 0;
-	short limMinusStatus=HAL_GPIO_ReadPin(gLimMinusPort, gLimMinusPin);
-	short limHomeStatus=HAL_GPIO_ReadPin(gLimHomePort, gLimHomePin);
 
-	if (limPlusStatus) {perPosMoving=false;}
-	if (limMinusStatus) {permNegMoving=false;}
-	if (limHomeStatus) {homecome=true;}
+	short limPlusStatus = (HAL_GPIO_ReadPin(gLimPlusPort, gLimPlusPin) == GPIO_PIN_SET) ? 0 : 1;
+	short limMinusStatus=(HAL_GPIO_ReadPin(gLimMinusPort, gLimMinusPin)== GPIO_PIN_SET) ? 0 : 1;
+	short limHomeStatus=(HAL_GPIO_ReadPin(gLimHomePort, gLimHomePin)== GPIO_PIN_SET) ? 0 : 1;
+
+	if (inverseLim == true)
+	{
+		limPlusStatus=!limPlusStatus;
+		limMinusStatus=!limMinusStatus;
+		limHomeStatus=!limHomeStatus;
+	}
+
+	perPosMoving = (limPlusStatus) ? false : true;
+	permNegMoving =(limMinusStatus) ? false : true;
+	homecome = (limHomeStatus) ? true : false;
 }
+
+bool Axis::checkAbleMoving()
+{
+	eDirection dir;
+	bool direct=HAL_GPIO_ReadPin(gDirPort, gDirPin);
+	(direct == 1) ? (dir = eDirection::Positive) : (dir = eDirection::Negative);
+
+	ableMoving =(((perPosMoving == true) && (dir==eDirection::Positive))||((permNegMoving == true && (dir==eDirection::Negative)))) ? true : false;
+
+	return (ableMoving);
+}
+
 void Axis::setDirection(eDirection dir)
 {
 		if (dir == eDirection::Positive)
@@ -54,6 +76,11 @@ void Axis::setDirection(eDirection dir)
 		{
 			HAL_GPIO_WritePin(gDirPort, gDirPin, GPIO_PIN_RESET);
 		}
+}
+
+void Axis::setInverseLim()
+{
+	inverseLim=true;
 }
 
 void Axis::jogging(eDirection dir)
@@ -222,4 +249,9 @@ void Axis::init(TIM_TypeDef* PWMTim, GPIO_TypeDef* portPWM, uint16_t pinPWM, uin
     GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(gDirPort, &GPIO_InitStruct);
 
+}
+
+void Axis::emgStop()
+{
+ mMotion.resetMotion();
 }

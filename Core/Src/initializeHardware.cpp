@@ -38,7 +38,6 @@ void initHardware()
 	__HAL_RCC_TIM9_CLK_ENABLE();
 	__HAL_RCC_TIM11_CLK_ENABLE();
 
-
 	/* Initialize all configured peripherals */
 	MX_GPIO_Init();
 	MX_ADC1_Init();
@@ -91,7 +90,6 @@ void SystemClock_Config(void)
     Error_Handler();
   }
 }
-
 
 static void MX_ADC1_Init(void)
 {
@@ -270,7 +268,3 @@ void Error_Handler(void)
   }
   /* USER CODE END Error_Handler_Debug */
 }
-
-
-
-

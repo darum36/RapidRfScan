@@ -25,8 +25,8 @@ void startMotion()
 
 	while (1)
 	{
-		for (unsigned int i=0; i<axis.size();i++)
-			{axis[i].checkLimits();}
+	for (unsigned int i=0; i<axis.size();i++)
+		{axis[i].checkLimits();}
 	}
 }
 
@@ -34,9 +34,10 @@ void TIM1_UP_TIM10_IRQHandler(void) //Прерывание раз в 1 мс
 {
 	for(unsigned int i =0; i< axis.size(); i++)
 	{
-
-		if (1)
-		{axis[i].jogging(eDirection::Positive);}
+		if (axis[i].checkAbleMoving() == false)
+			{axis[i].emgStop();}
+		else
+			{axis[i].jogging(eDirection::Negative);}
 	}
 
 	HAL_TIM_IRQHandler(&htim10);
@@ -53,6 +54,8 @@ void initMotion()
 				   LIM_1C1_GPIO_Port, LIM_1C1_Pin,                      // GPIOs LIMIT
 				   LIM_HOME_1_GPIO_Port, LIM_HOME_1_Pin,		        // GPIOs LIMIT
 				   DIR1_GPIO_Port, DIR1_Pin);							// GPIOs DIR
+
+//	axis[0].setInverseLim();
 	axis[0].tempDefaultParam();
 
 	axis[1].init(TIM5,
@@ -64,8 +67,9 @@ void initMotion()
 					LIM_2C3_GPIO_Port, LIM_2C3_Pin,                     // GPIOs LIMIT
 					LIM_HOME_2_GPIO_Port, LIM_HOME_2_Pin,		        // GPIOs LIMIT
 					DIR2_GPIO_Port, DIR2_Pin);							// GPIOs DIR
-	axis[1].tempDefaultParam();
 
+//	axis[1].setInverseLim();
+	axis[1].tempDefaultParam();
 }
 
 void initUart()

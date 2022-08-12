@@ -15,7 +15,7 @@ mPWMTim(PWMTim)
 	mMovingTime = 0;
 }
 
-void Motion::acceleration() 						// Ускорение
+void Motion::acceleration() 										// Ускорение
 {
 
 float deltaSpeed=mAcc/float(1000);
@@ -57,7 +57,7 @@ if (mSpeed+deltaSpeed<=mSpeed)																/* Пока скорость не 
 }
 }
 
-void Motion::deceleration()										/* Торможение */
+void Motion::deceleration()										    /* Торможение */
 {
 	float deltaSpeed=mDcc/double(1000);
 	uint32_t currentPeriod;
@@ -79,7 +79,7 @@ void Motion::deceleration()										/* Торможение */
 	}
 }
 
-void Motion::moving (uint64_t movingSteps)										/* Равномерное движение */
+void Motion::moving (uint64_t movingSteps)						/* Равномерное движение */
 {
 	if (motorOn())
 	{
@@ -209,4 +209,10 @@ void Motion::setDcc(float newDcc)
 float Motion::getDcc()
 {
 	return mDcc;
+}
+
+void Motion::resetMotion()
+{
+	HAL_TIM_PWM_Stop(mPWMTim, TIM_CHANNEL_1);
+	mCurrentSpeed=0;
 }

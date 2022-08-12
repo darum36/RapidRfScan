@@ -24,17 +24,22 @@ public:
 
 	short getLimStatus();
 	void checkLimits();
+	bool checkAbleMoving();
+	void emgStop();
 	void jogging(eDirection dir);
 	void setDirection(eDirection dir);
+	void setInverseLim();
 	void tempSetParam(float newSpeed, float newAcc, float newDcc);
 	void tempDefaultParam();
-	void init(TIM_TypeDef* PWMTim, GPIO_TypeDef* portPWM, uint16_t pinPWM, uint8_t afMapingPWM,             		 	// PWM
-			TIM_TypeDef* EncTim,  GPIO_TypeDef* portEncA, uint16_t pinEncA, uint8_t afMapingEncA,    		 // TIM ENCA
-								  GPIO_TypeDef* portEncB, uint16_t pinEncB, uint8_t afMapingEncB,					  // TIM ENCB																              // GPIO DIR
-			GPIO_TypeDef* portLimPlus, uint16_t	pinLimPlus,
-			GPIO_TypeDef* portLimMinus, uint16_t pinLimMinus,     // GPIOs LIMIT
-			GPIO_TypeDef* portLimHome, uint16_t	pinLimHome,
-			GPIO_TypeDef* portDir, uint16_t	pinDir);
+	void init(TIM_TypeDef* PWMTim,																	// PWM
+			  GPIO_TypeDef* portPWM, uint16_t pinPWM, uint8_t afMapingPWM,             		 		// PWM
+			  TIM_TypeDef* EncTim,																	// TIM ENC
+			  GPIO_TypeDef* portEncA, uint16_t pinEncA, uint8_t afMapingEncA,    		 			// TIM ENCA
+			  GPIO_TypeDef* portEncB, uint16_t pinEncB, uint8_t afMapingEncB,					    // TIM ENCB																              // GPIO DIR
+			  GPIO_TypeDef* portLimPlus, uint16_t	pinLimPlus,										// GPIOs LIMIT
+			  GPIO_TypeDef* portLimMinus, uint16_t pinLimMinus,     								// GPIOs LIMIT
+			  GPIO_TypeDef* portLimHome, uint16_t	pinLimHome,										// GPIOs LIMIT
+			  GPIO_TypeDef* portDir, uint16_t	pinDir);											// GPIOs LIMIT
 
 private:
 
@@ -74,5 +79,8 @@ private:
 	bool perPosMoving;
 	bool permNegMoving;
 	bool homecome;
+	bool ableMoving;
+	bool inverseLim;
+
 };
 #endif /* INC_AXIS_H_ */

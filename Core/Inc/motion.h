@@ -7,8 +7,6 @@
 
 #ifndef INC_MOTION_H_
 #define INC_MOTION_H_
-//
-//#include <cmath>
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,6 +32,7 @@ public:
 	float getAcc();
 	void setDcc(float newDcc);
 	float getDcc();
+	void resetMotion();
 
 private:
 
@@ -51,8 +50,7 @@ private:
 	uint64_t mMovingTime;
 
 	TIM_HandleTypeDef* mPWMTim;
+
 };
-
-
 
 #endif /* INC_MOTION_H_ */
