@@ -17,20 +17,26 @@ std::array<Axis, 2> axis =
 TIM_HandleTypeDef htim10;
 UART_HandleTypeDef huart1;
 
+
 void startMotion()
 {
 	initMotion();
 	initUart();
 
 	while (1)
-	{}
+	{
+		for (unsigned int i=0; i<axis.size();i++)
+			{axis[i].checkLimits();}
+	}
 }
 
 void TIM1_UP_TIM10_IRQHandler(void) //Прерывание раз в 1 мс
 {
 	for(unsigned int i =0; i< axis.size(); i++)
 	{
-		axis[i].jogging(eDirection::Positive);
+
+		if (1)
+		{axis[i].jogging(eDirection::Positive);}
 	}
 
 	HAL_TIM_IRQHandler(&htim10);

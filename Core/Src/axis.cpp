@@ -12,6 +12,9 @@ extern void Error_Handler();
 Axis::Axis():mMotion(&mPWMTim)
 {
 	tempStatus = 0;
+	perPosMoving=0;
+	permNegMoving=0;
+	homecome=0;
 };
 
 short Axis::getLimStatus()
@@ -31,6 +34,16 @@ short Axis::getLimStatus()
 	return tempStatus;
 }
 
+void Axis::checkLimits()
+{
+	short limPlusStatus = (HAL_GPIO_ReadPin(gLimPlusPort, gLimPlusPin) == GPIO_PIN_SET) ? 1 : 0;
+	short limMinusStatus=HAL_GPIO_ReadPin(gLimMinusPort, gLimMinusPin);
+	short limHomeStatus=HAL_GPIO_ReadPin(gLimHomePort, gLimHomePin);
+
+	if (limPlusStatus) {perPosMoving=false;}
+	if (limMinusStatus) {permNegMoving=false;}
+	if (limHomeStatus) {homecome=true;}
+}
 void Axis::setDirection(eDirection dir)
 {
 		if (dir == eDirection::Positive)

@@ -23,6 +23,7 @@ public:
 	virtual ~Axis()=default;
 
 	short getLimStatus();
+	void checkLimits();
 	void jogging(eDirection dir);
 	void setDirection(eDirection dir);
 	void tempSetParam(float newSpeed, float newAcc, float newDcc);
@@ -70,6 +71,8 @@ private:
 	Motion 	  	 mMotion;
 
 	short tempStatus;
+	bool perPosMoving;
+	bool permNegMoving;
+	bool homecome;
 };
-
 #endif /* INC_AXIS_H_ */
