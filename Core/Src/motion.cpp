@@ -8,10 +8,11 @@
 #include <motion.h>
 #include "math.h"
 
+extern Remote remoteController1;
+
 Motion::Motion(TIM_HandleTypeDef* PWMTim):
 mPWMTim(PWMTim)
 {
-	mNeedMoving = false;
 	mMovingTime = 0;
 }
 
@@ -21,8 +22,9 @@ void Motion::acceleration() 										// Ускорение
 float deltaSpeed=mAcc/float(1000);
 uint32_t currentPeriod;
 
+
 if (!motorOn()) {mCurrentSpeed=0;}
-if (mSpeed+deltaSpeed<=mSpeed)																/* Пока скорость не достигла максимальной будем ускорятся */
+if (mCurrentSpeed+deltaSpeed<=mSpeed)																/* Пока скорость не достигла максимальной будем ускорятся */
 {
 	if (motorOn())																			/* Если мы двигались до этого, то увеличим скорость */
 	{
@@ -46,7 +48,7 @@ if (mSpeed+deltaSpeed<=mSpeed)																/* Пока скорость не 
 		else																				/* Если шаг ускорения меньше чем максимальная скорость, то */
 		{
 			mCurrentSpeed=deltaSpeed;
-			currentPeriod=round(mCurrentSpeed);
+			currentPeriod=round(float(100000000)/mCurrentSpeed);
 			if (!currentPeriod) currentPeriod = 100000000;
 
 			__HAL_TIM_SET_COMPARE(mPWMTim,TIM_CHANNEL_1,(currentPeriod)/2+1);     			/* Установка скважности Шима */
@@ -74,22 +76,16 @@ void Motion::deceleration()										    /* Торможение */
 		}
 		else
 		{
-			HAL_TIM_PWM_Stop(mPWMTim, TIM_CHANNEL_1);								/* Выключение мотора */
+			resetMotion();								/* Выключение мотора */
 		}
 	}
 }
 
-void Motion::moving (uint64_t movingSteps)						/* Равномерное движение */
+void Motion::moving ()												/* Равномерное движение */
 {
 	if (motorOn())
 	{
-		if (!mNeedMoving)
-		{
-			mMovingTime=movingSteps*1000;
-			mMovingTime=mMovingTime/uint64_t(round(mCurrentSpeed));
-			mNeedMoving=true;
-		}
-		(mMovingTime>0) ? mMovingTime-- :	mNeedMoving=false;
+		if (mMovingTime>0) { mMovingTime--; }
 	}
 }
 
@@ -106,9 +102,9 @@ uint32_t currentPeriod;
 
 if (!motorOn()) {mCurrentSpeed=0;}
 
-if (mCurrentSpeed>0 || HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13)==GPIO_PIN_RESET)																/* Пока скорость больше нуля или нажата кнопка */ 		/*!!!!!!!!!!!!! Необходимо вписать номер порта и пина для кнопки!!!!!!!!!!!!!!!!! */
+if (mCurrentSpeed>0 || remoteController1.getRunStatus() == true)																/* Пока скорость больше нуля или нажата кнопка */ 		/*!!!!!!!!!!!!! Необходимо вписать номер порта и пина для кнопки!!!!!!!!!!!!!!!!! */
 {
-	if (HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13)==GPIO_PIN_RESET)																		/* Если кнопка нажата */								/*!!!!!!!!!!!!! Необходимо вписать номер порта и пина для кнопки!!!!!!!!!!!!!!!!! */
+	if (remoteController1.getRunStatus() == true)																		/* Если кнопка нажата */								/*!!!!!!!!!!!!! Необходимо вписать номер порта и пина для кнопки!!!!!!!!!!!!!!!!! */
 	{
 		if (mCurrentSpeed>0)																			/* Проверка стартуем ли мы, нужно ли включать моторы */
 		{
@@ -129,9 +125,9 @@ if (mCurrentSpeed>0 || HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13)==GPIO_PIN_RESET)				
 				__HAL_TIM_SET_AUTORELOAD(mPWMTim, currentPeriod);						/* Установка периода Шима */
 			}
 		}
-		else																				/* Старт */
+		else																			/* Старт */
 		{
-			if (deltaSpeedAcc>=mSpeed)																/* Если шаг больше чем максимальная скорость, то */
+			if (deltaSpeedAcc>=mSpeed)													/* Если шаг больше чем максимальная скорость, то */
 			{
 				mCurrentSpeed=mSpeed;																		/* скорость равна максимальной */
 				currentPeriod=round(float(100000000)/mCurrentSpeed);
@@ -140,7 +136,7 @@ if (mCurrentSpeed>0 || HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13)==GPIO_PIN_RESET)				
 				__HAL_TIM_SET_AUTORELOAD(mPWMTim, currentPeriod);						/* Установка периода Ш�?Ма */
 				HAL_TIM_PWM_Start(mPWMTim, TIM_CHANNEL_1);								/* Запуск мотора */
 			}
-			else																			/* Если шаг меньше чем максимальная скорость, то */
+			else																		/* Если шаг меньше чем максимальная скорость, то */
 			{
 				mCurrentSpeed=deltaSpeedAcc;																	/* Увеличиваем скорость на один шаг */
 				currentPeriod=round(float(100000000)/mCurrentSpeed);
@@ -151,7 +147,7 @@ if (mCurrentSpeed>0 || HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13)==GPIO_PIN_RESET)				
 			}
 		}
 	}
-	else																					/* Если кнопка не нажата и мы все ещё движемся */
+	else																				/* Если кнопка не нажата и мы все ещё движемся */
 	{
 		if (mCurrentSpeed>deltaSpeedDcc)
 		{
@@ -164,6 +160,73 @@ if (mCurrentSpeed>0 || HAL_GPIO_ReadPin(GPIOC, GPIO_PIN_13)==GPIO_PIN_RESET)				
 		{
 			HAL_TIM_PWM_Stop(mPWMTim, TIM_CHANNEL_1);									/* Выключаем мотор */
 			mCurrentSpeed=0;																			/* Необходимо чтобы выйти из цикла */
+		}
+	}
+}
+}
+
+void Motion::ptp()                                                                       /* Движение на заданное количество шагов */
+{
+float deltaSpeedAcc=mAcc/float(1000);
+float deltaSpeedDcc=mDcc/float(1000);
+uint32_t currentPeriod;
+uint64_t Steps_deltaV;
+
+if (!motorOn()) {mCurrentSpeed=0;}
+
+if (mMovingTime == 0)
+{
+	Steps_deltaV=round((((deltaSpeedAcc+deltaSpeedDcc)/float(2))+mSpeed)*mSpeed/mAcc);
+
+	if (mSteps<Steps_deltaV)
+	{
+		PtPModeMoving = ModeMoving::LowSpeed;
+
+		mCurrentSpeed=1000;
+		mMovingTime=round(float(mSteps)*float(1000)/mCurrentSpeed);
+		currentPeriod=round(float(100000000)/mCurrentSpeed);
+
+		__HAL_TIM_SET_COMPARE(mPWMTim,TIM_CHANNEL_1,currentPeriod/2+1);
+		__HAL_TIM_SET_AUTORELOAD(mPWMTim, currentPeriod);
+		HAL_TIM_PWM_Start(mPWMTim, TIM_CHANNEL_1);
+	}
+	else
+	{
+		PtPModeMoving = ModeMoving::NormalSpeed;
+
+		mMovingSteps=mSteps-Steps_deltaV;
+		mMovingTime=mMovingSteps*1000/uint64_t(round(mSpeed));
+	}
+}
+else
+{
+	if (PtPModeMoving == ModeMoving::LowSpeed)
+	{
+		if (mMovingTime>0)
+		{
+			moving();
+		}
+		else
+		{
+			resetMotion();
+		}
+	}
+	else if (PtPModeMoving == ModeMoving::NormalSpeed)
+	{
+		if (mMovingTime>0)
+		{
+			if (mCurrentSpeed < mSpeed)
+			{
+				acceleration();
+			}
+			else
+			{
+				moving();
+			}
+		}
+		else
+		{
+			deceleration();
 		}
 	}
 }
@@ -211,8 +274,17 @@ float Motion::getDcc()
 	return mDcc;
 }
 
+void Motion::setSteps(uint64_t newSteps)
+{
+	if (newSteps>0)
+	{
+		mSteps=newSteps;
+	}
+}
+
 void Motion::resetMotion()
 {
 	HAL_TIM_PWM_Stop(mPWMTim, TIM_CHANNEL_1);
 	mCurrentSpeed=0;
 }
+

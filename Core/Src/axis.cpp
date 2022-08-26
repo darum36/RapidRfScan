@@ -17,7 +17,7 @@ Axis::Axis():mMotion(&mPWMTim)
 	homecome= false;
 	ableMoving= false;
 	inverseLim=false;
-};
+}
 
 short Axis::getLimStatus()
 {
@@ -89,6 +89,12 @@ void Axis::jogging(eDirection dir)
 	mMotion.jogging();
 }
 
+void Axis::ptp(eDirection dir)
+{
+	setDirection(dir);
+	mMotion.ptp();
+}
+
 void Axis::tempSetParam(float newSpeed, float newAcc, float newDcc)
 {
 	mMotion.setSpeed(newSpeed);
@@ -101,6 +107,7 @@ void Axis::tempDefaultParam()
 	mMotion.setSpeed(1000000);
 	mMotion.setAcc(1000000);
 	mMotion.setDcc(1000000);
+	mMotion.setSteps(5000000);
 }
 
 void Axis::init(TIM_TypeDef* PWMTim, GPIO_TypeDef* portPWM, uint16_t pinPWM, uint8_t afMapingPWM,             		 	// PWM

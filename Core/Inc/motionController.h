@@ -13,6 +13,7 @@
 #include <string>
 #include <cmath>
 #include <axis.h>
+#include <remote.h>
 #include "Ring_Buf.h"
 #include <array>
 
@@ -29,5 +30,6 @@ void TIM1_UP_TIM10_IRQHandler(void);
 void initMotion();
 void initUart();
 void startMotion();
+void checkEmgStatus();
 
 #endif /* INC_MOTIONCONTROLLER_H_ */

@@ -27,6 +27,7 @@ public:
 	bool checkAbleMoving();
 	void emgStop();
 	void jogging(eDirection dir);
+	void ptp(eDirection dir);
 	void setDirection(eDirection dir);
 	void setInverseLim();
 	void tempSetParam(float newSpeed, float newAcc, float newDcc);
