@@ -6,16 +6,15 @@
  */
 
 #include <remote.h>
+#include <motion.h>
 
 extern void Error_Handler();
 
 Remote::Remote()
-
 {
 	mOnOffStatus = false;
 	mFineStatus = false;
 	mRunStatus = false;
-	mCurrentAdcSpeed = 0;
 }
 
 void Remote::checkOnOffStatus()
@@ -53,10 +52,19 @@ bool Remote::getFineStatus()
 
 void Remote::checkSpeed()
 {
-	HAL_ADC_Start(&hadc1);
-	uint32_t newAdcSpeed = HAL_ADC_GetValue(&hadc1);
+	HAL_ADC_Start(&mAdc);
+	HAL_ADC_PollForConversion(&mAdc, 100);
+	uint32_t newAdcSpeed = HAL_ADC_GetValue(&mAdc);
 	mCurrentAdcSpeed = newAdcSpeed;
-	HAL_ADC_Stop(&hadc1);
+}
+
+int Remote::getSpeedStatus()
+{
+	if ((mCurrentAdcSpeed < mAvrAdcValue + mSizeDeadZone) && (mCurrentAdcSpeed > mAvrAdcValue-mSizeDeadZone)) {return 0;}
+
+	else if (mCurrentAdcSpeed > mAvrAdcValue + mSizeDeadZone) {return -int(mCurrentAdcSpeed - mAvrAdcValue);}
+
+	else if (mCurrentAdcSpeed < mAvrAdcValue - mSizeDeadZone) {return int(2000) - int(mCurrentAdcSpeed);}
 }
 
 void Remote::checkNumberAxe()
@@ -72,7 +80,7 @@ void Remote::checkRemoteStatus()
 	checkSpeed();
 }
 
-void Remote::init(ADC_TypeDef* ADCSpeed,
+void Remote::init(ADC_HandleTypeDef adc,
 				  GPIO_TypeDef* portSpeed, uint16_t pinSpeed,
 				  GPIO_TypeDef* portOnOff, uint16_t	pinOnOff,
 				  GPIO_TypeDef* portRun, uint16_t	pinRun,
@@ -81,7 +89,7 @@ void Remote::init(ADC_TypeDef* ADCSpeed,
 				  GPIO_TypeDef* portAxis1, uint16_t	pinAxis1,
 				  GPIO_TypeDef* portAxis2, uint16_t	pinAxis2)
 {
-	mADCSpeedTypeDef = ADCSpeed;
+	mAdc = adc;
 
 	gPortSpeed = portSpeed;
 	gPinSpeed = pinSpeed;
@@ -97,5 +105,49 @@ void Remote::init(ADC_TypeDef* ADCSpeed,
 	gPinAxis1 = pinAxis1;
 	gPortAxis2 = portAxis2;
 	gPinAxis2 = pinAxis2;
+
+	mMaxAdcValue = 4000;
+	mAvrAdcValue = 2000;
+	mMinAdcValue = 20;
+	mSizeDeadZone = 200;
+
+	__HAL_RCC_ADC1_CLK_ENABLE();
+	  ADC_ChannelConfTypeDef sConfig = {0};
+
+	  mAdc.Instance = ADC1;
+	  mAdc.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+	  mAdc.Init.Resolution = ADC_RESOLUTION_12B;
+	  mAdc.Init.ScanConvMode = DISABLE;
+	  mAdc.Init.ContinuousConvMode = ENABLE;
+	  mAdc.Init.DiscontinuousConvMode = DISABLE;
+	  mAdc.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+	  mAdc.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+	  mAdc.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+	  mAdc.Init.NbrOfConversion = 1;
+	  mAdc.Init.DMAContinuousRequests = DISABLE;
+	  mAdc.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+
+
+	  if (HAL_ADC_Init(&mAdc) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+
+	  sConfig.Channel = ADC_CHANNEL_1;
+	  sConfig.Rank = 1;
+	  sConfig.SamplingTime = ADC_SAMPLETIME_15CYCLES;
+	  sConfig.Offset       = 0;
+
+	  if (HAL_ADC_ConfigChannel(&mAdc, &sConfig) != HAL_OK)
+	  {
+	    Error_Handler();
+	  }
+
+	  GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+	  GPIO_InitStruct.Pin = gPinSpeed;
+	  GPIO_InitStruct.Mode = GPIO_MODE_ANALOG;
+	  GPIO_InitStruct.Pull = GPIO_NOPULL;
+	  HAL_GPIO_Init(gPortSpeed, &GPIO_InitStruct);
 }
 

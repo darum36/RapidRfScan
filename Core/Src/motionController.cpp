@@ -18,6 +18,8 @@ std::array<Axis, 2> axis =
 
 TIM_HandleTypeDef htim10;
 UART_HandleTypeDef huart1;
+ADC_HandleTypeDef hadc1;
+
 
 bool emgStatus = HAL_GPIO_ReadPin(Emergency_status_GPIO_Port, Emergency_status_Pin);
 
@@ -40,20 +42,46 @@ void TIM1_UP_TIM10_IRQHandler(void) //Прерывание раз в 1 мс
 	for(unsigned int i =0; i< axis.size(); i++)
 	{
 		if ((axis[i].checkAbleMoving() == false)||(emgStatus == true))
-			{axis[i].emgStop();}
+		{
+			axis[i].emgStop();
+		}
 		else
 		{
-			if (remoteController1.getFineStatus() == true)
-			{axis[i].tempSetParam(500000, 1000000, 1000000);}
+			int newSpeed = remoteController1.getSpeedStatus();
+
+			if ((remoteController1.getRunStatus() == true) && (newSpeed != 0))
+			{
+				if (remoteController1.getFineStatus() == true)
+				{
+					axis[i].tempSetParam(100000, 1000000, 1000000);
+					if (newSpeed > 0)
+					{
+						axis[i].jogging(eDirection::Positive);
+					}
+					else if (newSpeed < 0)
+					{
+						axis[i].jogging(eDirection::Negative);
+					}
+				}
+				else
+				{
+					axis[i].tempSetParam(float(abs(newSpeed)*700), 1000000, 1000000);
+					if (newSpeed > 0)
+					{
+						axis[i].jogging(eDirection::Positive);
+					}
+					else if (newSpeed < 0)
+					{
+						axis[i].jogging(eDirection::Negative);
+					}
+				}
+			}
 			else
-			{axis[i].tempDefaultParam();}
-
-			axis[i].jogging(eDirection::Negative);
+			{
+				axis[i].emgStop();
+			}
 		}
-
 	}
-//			{axis[i].ptp(eDirection::Positive);}
-
 	HAL_TIM_IRQHandler(&htim10);
 }
 
@@ -76,7 +104,6 @@ void initMotion()
 			     DIR1_GPIO_Port, DIR1_Pin);							// GPIOs DIR
 
 	axis[0].setInverseLim();
-	axis[0].tempDefaultParam();
 
 	axis[1].init(TIM5,
 				 STEP2_GPIO_Port, STEP2_Pin, GPIO_AF2_TIM5,			// PWM
@@ -89,15 +116,14 @@ void initMotion()
 				 DIR2_GPIO_Port, DIR2_Pin);							// GPIOs DIR
 
 //	axis[1].setInverseLim();
-	axis[1].tempDefaultParam();
 
-	remoteController1.init(ADC1, GPIOA, GPIO_PIN_2,
-						   GPIOC, GPIO_PIN_9,
-						   GPIOC, GPIO_PIN_12,
-						   GPIOC, GPIO_PIN_13,
-						   GPIOC, GPIO_PIN_10,
-						   GPIOC, GPIO_PIN_11,
-						   GPIOA, GPIO_PIN_2);
+	remoteController1.init(hadc1, SPEED_GPIO_Port, SPEED_Pin,
+						   ON_OFF_GPIO_Port, ON_OFF_Pin,
+						   RUN_GPIO_Port, RUN_Pin,
+						   TRS_FINE_GPIO_Port, TRS_FINE_Pin,
+						   AXIS0_GPIO_Port, AXIS0_Pin,
+						   AXIS1_GPIO_Port, AXIS1_Pin,
+						   AXIS2_GPIO_Port, AXIS2_Pin);
 }
 
 void initUart()

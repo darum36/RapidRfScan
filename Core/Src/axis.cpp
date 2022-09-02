@@ -110,6 +110,11 @@ void Axis::tempDefaultParam()
 	mMotion.setSteps(5000000);
 }
 
+void Axis::emgStop()
+{
+ mMotion.resetMotion();
+}
+
 void Axis::init(TIM_TypeDef* PWMTim, GPIO_TypeDef* portPWM, uint16_t pinPWM, uint8_t afMapingPWM,             		 	// PWM
 		TIM_TypeDef* EncTim,  GPIO_TypeDef* portEncA, uint16_t pinEncA, uint8_t afMapingEncA,    		 				// TIM ENCA
 							  GPIO_TypeDef* portEncB, uint16_t pinEncB, uint8_t afMapingEncB,					 		// TIM ENCB																              // GPIO DIR
@@ -258,7 +263,3 @@ void Axis::init(TIM_TypeDef* PWMTim, GPIO_TypeDef* portPWM, uint16_t pinPWM, uin
 
 }
 
-void Axis::emgStop()
-{
- mMotion.resetMotion();
-}

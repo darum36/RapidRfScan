@@ -17,15 +17,11 @@
 #include "Ring_Buf.h"
 #include <array>
 
-#ifdef __cplusplus
+
 extern "C" {
-#endif
-
 void TIM1_UP_TIM10_IRQHandler(void);
-
-#ifdef __cplusplus
 }
-#endif
+
 
 void initMotion();
 void initUart();

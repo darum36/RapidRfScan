@@ -27,7 +27,8 @@ public:
 	bool getOnOffStatus();
 	bool getFineStatus();
 	bool getRunStatus();
-	void init(ADC_TypeDef* ADCSpeed,
+	int getSpeedStatus();
+	void init(ADC_HandleTypeDef adc,
 			  GPIO_TypeDef* portSpeed, uint16_t pinSpeed,
 			  GPIO_TypeDef* portOnOff, uint16_t	pinOnOff,
 			  GPIO_TypeDef* portRun, uint16_t	pinRun,
@@ -38,8 +39,7 @@ public:
 
 private:
 
-		ADC_TypeDef* mADCSpeedTypeDef;
-		ADC_HandleTypeDef hadc1;
+		ADC_HandleTypeDef mAdc;
 
 		GPIO_TypeDef* gPortSpeed;
 		uint16_t 	 gPinSpeed;
@@ -71,6 +71,11 @@ private:
 	bool mOnOffStatus;
 	bool mFineStatus;
 	bool mRunStatus;
+
+	uint32_t mMaxAdcValue;
+	uint32_t mAvrAdcValue;
+	uint32_t mMinAdcValue;
+	uint32_t mSizeDeadZone;
 	uint32_t mCurrentAdcSpeed;
 
 };
