@@ -12,11 +12,12 @@ extern void Error_Handler();
 Axis::Axis():mMotion(&mPWMTim)
 {
 	tempStatus = 0;
-	perPosMoving= false;
-	permNegMoving= false ;
-	homecome= false;
-	ableMoving= false;
-	inverseLim=false;
+	perPosMoving = false;
+	permNegMoving = false ;
+	homecome = false;
+	ableMoving = false;
+	inverseLim = false;
+	modeMoving = 0;
 }
 
 short Axis::getLimStatus()
@@ -100,6 +101,7 @@ void Axis::tempSetParam(float newSpeed, float newAcc, float newDcc)
 	mMotion.setSpeed(newSpeed);
 	mMotion.setAcc(newAcc);
 	mMotion.setDcc(newDcc);
+	mMotion.getSpeed();
 }
 
 void Axis::tempDefaultParam()
@@ -114,6 +116,58 @@ void Axis::emgStop()
 {
  mMotion.resetMotion();
 }
+
+//-----------------------------------------------------------------------------------------------
+
+int32_t Axis::getSpeed()
+{
+	int32_t axisSpeed = int32_t(mMotion.getSpeed());
+	return axisSpeed;
+}
+
+int32_t Axis::getAcc()
+{
+	int32_t axisAcc = int32_t(mMotion.getAcc());
+	return axisAcc;
+}
+
+int32_t Axis::getDcc()
+{
+	int32_t axisDcc = int32_t(mMotion.getDcc());
+	return axisDcc;
+}
+
+int32_t Axis::getModeMoving()
+{
+	return int32_t(modeMoving);
+}
+
+//-----------------------------------------------------------------------------------------------
+
+void Axis::setSpeed(int32_t newSpeed)
+{
+	float axisSpeed = float(newSpeed);
+	mMotion.setSpeed(axisSpeed);
+}
+
+void Axis::setAcc(int32_t newAcc)
+{
+	float axisAcc = float(newAcc);
+	mMotion.setAcc(axisAcc);
+}
+
+void Axis::setDcc(int32_t newDcc)
+{
+	float axisDcc = float(newDcc);
+	mMotion.setDcc(axisDcc);
+}
+
+void Axis::setModeMoving(int32_t MM)
+{
+	modeMoving = MM;
+}
+
+//-----------------------------------------------------------------------------------------------
 
 void Axis::init(TIM_TypeDef* PWMTim, GPIO_TypeDef* portPWM, uint16_t pinPWM, uint8_t afMapingPWM,             		 	// PWM
 		TIM_TypeDef* EncTim,  GPIO_TypeDef* portEncA, uint16_t pinEncA, uint8_t afMapingEncA,    		 				// TIM ENCA

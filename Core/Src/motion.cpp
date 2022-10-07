@@ -102,24 +102,24 @@ uint32_t currentPeriod;
 
 if (!motorOn()) {mCurrentSpeed=0;}
 
-if (mCurrentSpeed>0 || remoteController1.getRunStatus() == true)																/* Пока скорость больше нуля или нажата кнопка */ 		/*!!!!!!!!!!!!! Необходимо вписать номер порта и пина для кнопки!!!!!!!!!!!!!!!!! */
+if (mCurrentSpeed > 0 || remoteController1.getRunStatus() == true)																/* Пока скорость больше нуля или нажата кнопка */ 		/*!!!!!!!!!!!!! Необходимо вписать номер порта и пина для кнопки!!!!!!!!!!!!!!!!! */
 {
 	if (remoteController1.getRunStatus() == true)																		/* Если кнопка нажата */								/*!!!!!!!!!!!!! Необходимо вписать номер порта и пина для кнопки!!!!!!!!!!!!!!!!! */
 	{
-		if (mCurrentSpeed>0)																			/* Проверка стартуем ли мы, нужно ли включать моторы */
+		if (mCurrentSpeed > 0)																			/* Проверка стартуем ли мы, нужно ли включать моторы */
 		{
-			if (mCurrentSpeed<=mSpeed)
+			if (mCurrentSpeed <= mSpeed)
 			{
-				mCurrentSpeed=mCurrentSpeed+deltaSpeedAcc;																	/* То ускоряемся */
-				currentPeriod=round(float(100000000)/mCurrentSpeed);
+				mCurrentSpeed = mCurrentSpeed+deltaSpeedAcc;																	/* То ускоряемся */
+				currentPeriod = round(float(100000000)/mCurrentSpeed);
 
 				__HAL_TIM_SET_COMPARE(mPWMTim,TIM_CHANNEL_1,currentPeriod/2+1);			/* Установка скважности Шима */
 				__HAL_TIM_SET_AUTORELOAD(mPWMTim, currentPeriod);						/* Установка периода Шима */
 			}
 			else
 			{
-				mCurrentSpeed=mSpeed;																		/* То скорость равна максимальной */
-				currentPeriod=round(float(100000000)/mCurrentSpeed);
+				mCurrentSpeed = mSpeed;																		/* То скорость равна максимальной */
+				currentPeriod = round(float(100000000)/mCurrentSpeed);
 
 				__HAL_TIM_SET_COMPARE(mPWMTim,TIM_CHANNEL_1,currentPeriod/2+1);			/* Установка скважности Шима */
 				__HAL_TIM_SET_AUTORELOAD(mPWMTim, currentPeriod);						/* Установка периода Шима */
@@ -127,10 +127,10 @@ if (mCurrentSpeed>0 || remoteController1.getRunStatus() == true)																
 		}
 		else																			/* Старт */
 		{
-			if (deltaSpeedAcc>=mSpeed)													/* Если шаг больше чем максимальная скорость, то */
+			if (deltaSpeedAcc >= mSpeed)													/* Если шаг больше чем максимальная скорость, то */
 			{
-				mCurrentSpeed=mSpeed;																		/* скорость равна максимальной */
-				currentPeriod=round(float(100000000)/mCurrentSpeed);
+				mCurrentSpeed = mSpeed;																		/* скорость равна максимальной */
+				currentPeriod = round(float(100000000)/mCurrentSpeed);
 
 				__HAL_TIM_SET_COMPARE(mPWMTim,TIM_CHANNEL_1,currentPeriod/2+1);			/* Установка скважности Шима */
 				__HAL_TIM_SET_AUTORELOAD(mPWMTim, currentPeriod);						/* Установка периода Ш�?Ма */
@@ -138,8 +138,8 @@ if (mCurrentSpeed>0 || remoteController1.getRunStatus() == true)																
 			}
 			else																		/* Если шаг меньше чем максимальная скорость, то */
 			{
-				mCurrentSpeed=deltaSpeedAcc;																	/* Увеличиваем скорость на один шаг */
-				currentPeriod=round(float(100000000)/mCurrentSpeed);
+				mCurrentSpeed = deltaSpeedAcc;																	/* Увеличиваем скорость на один шаг */
+				currentPeriod = round(float(100000000)/mCurrentSpeed);
 
 				__HAL_TIM_SET_COMPARE(mPWMTim,TIM_CHANNEL_1,currentPeriod/2+1);			/* Установка скважности Шима */
 				__HAL_TIM_SET_AUTORELOAD(mPWMTim, currentPeriod);						/* Установка периода Ш�?Ма */

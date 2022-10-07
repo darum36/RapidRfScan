@@ -17,9 +17,7 @@ extern "C" {
 #include "stm32f4xx_hal.h"
 
 void initHardware();
-
 void SystemClock_Config(void);
-
 
 #define TRS_FINE_Pin GPIO_PIN_13
 #define TRS_FINE_GPIO_Port GPIOC

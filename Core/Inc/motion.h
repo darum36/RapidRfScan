@@ -61,8 +61,6 @@ private:
 	ModeMoving PtPModeMoving;
 
 	TIM_HandleTypeDef* mPWMTim;
-
-
 };
 
 #endif /* INC_MOTION_H_ */

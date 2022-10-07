@@ -6,9 +6,6 @@
  */
 
 #include "motionController.h"
-#include "UART_Functions.h"
-
-Remote remoteController1;
 
 std::array<Axis, 2> axis =
 {
@@ -16,11 +13,13 @@ std::array<Axis, 2> axis =
     Axis()
 };
 
+Remote remoteController1;
+
 TIM_HandleTypeDef htim10;
-UART_HandleTypeDef huart1;
 ADC_HandleTypeDef hadc1;
 
-
+bool boardID = 0;
+short CurrentAxis = remoteController1.getAxisStatus();
 bool emgStatus = HAL_GPIO_ReadPin(Emergency_status_GPIO_Port, Emergency_status_Pin);
 
 void startMotion()
@@ -30,58 +29,59 @@ void startMotion()
 
 	while (1)
 	{
+		checkUARTbuffer();
 	for (unsigned int i=0; i<axis.size();i++)
-		{axis[i].checkLimits();}
+		{ axis[i].checkLimits(); }
 		checkEmgStatus();
 		remoteController1.checkRemoteStatus();
 	}
 }
 
-void TIM1_UP_TIM10_IRQHandler(void) //Прерывание раз в 1 мс
+void TIM1_UP_TIM10_IRQHandler(void)
 {
-	for(unsigned int i =0; i< axis.size(); i++)
+	if ((CurrentAxis == 1 || CurrentAxis == 0) && (boardID == 0))
 	{
-		if ((axis[i].checkAbleMoving() == false)||(emgStatus == true))
-		{
-			axis[i].emgStop();
-		}
-		else
-		{
-			int newSpeed = remoteController1.getSpeedStatus();
-
-			if ((remoteController1.getRunStatus() == true) && (newSpeed != 0))
+			if ((axis[CurrentAxis].checkAbleMoving() == false)||(emgStatus == true))
 			{
-				if (remoteController1.getFineStatus() == true)
+				axis[CurrentAxis].emgStop();
+			}
+			else
+			{
+				int newSpeed = remoteController1.getSpeedStatus();
+
+				if ((remoteController1.getRunStatus() == true) && (newSpeed != 0))
 				{
-					axis[i].tempSetParam(100000, 1000000, 1000000);
-					if (newSpeed > 0)
+					if (remoteController1.getFineStatus() == true)
 					{
-						axis[i].jogging(eDirection::Positive);
+						axis[CurrentAxis].tempSetParam(100000, 1000000, 1000000);
+						if (newSpeed > 0)
+						{
+							axis[CurrentAxis].jogging(eDirection::Positive);
+						}
+						else if (newSpeed < 0)
+						{
+							axis[CurrentAxis].jogging(eDirection::Negative);
+						}
 					}
-					else if (newSpeed < 0)
+					else
 					{
-						axis[i].jogging(eDirection::Negative);
+						axis[CurrentAxis].tempSetParam(float(abs(newSpeed)*700), 1000000, 1000000);
+						if (newSpeed > 0)
+						{
+							axis[CurrentAxis].jogging(eDirection::Positive);
+						}
+						else if (newSpeed < 0)
+						{
+							axis[CurrentAxis].jogging(eDirection::Negative);
+						}
 					}
 				}
 				else
 				{
-					axis[i].tempSetParam(float(abs(newSpeed)*700), 1000000, 1000000);
-					if (newSpeed > 0)
-					{
-						axis[i].jogging(eDirection::Positive);
-					}
-					else if (newSpeed < 0)
-					{
-						axis[i].jogging(eDirection::Negative);
-					}
+					axis[CurrentAxis].emgStop();
 				}
 			}
-			else
-			{
-				axis[i].emgStop();
-			}
 		}
-	}
 	HAL_TIM_IRQHandler(&htim10);
 }
 
@@ -124,9 +124,6 @@ void initMotion()
 						   AXIS0_GPIO_Port, AXIS0_Pin,
 						   AXIS1_GPIO_Port, AXIS1_Pin,
 						   AXIS2_GPIO_Port, AXIS2_Pin);
-}
 
-void initUart()
-{
-
+	boardID = HAL_GPIO_ReadPin(BOARD_ID_GPIO_Port, BOARD_ID_Pin);
 }

@@ -28,6 +28,8 @@ public:
 	bool getFineStatus();
 	bool getRunStatus();
 	int getSpeedStatus();
+	short getAxisStatus();
+
 	void init(ADC_HandleTypeDef adc,
 			  GPIO_TypeDef* portSpeed, uint16_t pinSpeed,
 			  GPIO_TypeDef* portOnOff, uint16_t	pinOnOff,
@@ -71,6 +73,7 @@ private:
 	bool mOnOffStatus;
 	bool mFineStatus;
 	bool mRunStatus;
+	short mCurrentAxis;
 
 	uint32_t mMaxAdcValue;
 	uint32_t mAvrAdcValue;

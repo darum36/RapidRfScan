@@ -26,10 +26,23 @@ public:
 	void checkLimits();
 	bool checkAbleMoving();
 	void emgStop();
+
 	void jogging(eDirection dir);
 	void ptp(eDirection dir);
+
 	void setDirection(eDirection dir);
 	void setInverseLim();
+
+	int32_t getSpeed();
+	int32_t getAcc();
+	int32_t getDcc();
+	int32_t getModeMoving();
+
+	void setSpeed(int32_t newSpeed);
+	void setAcc(int32_t newAcc);
+	void setDcc(int32_t newDcc);
+	void setModeMoving(int32_t MM);
+
 	void tempSetParam(float newSpeed, float newAcc, float newDcc);
 	void tempDefaultParam();
 	void init(TIM_TypeDef* PWMTim,																	// PWM
@@ -44,37 +57,37 @@ public:
 
 private:
 
-	TIM_TypeDef* mPwmTimTypeDef;
+	TIM_TypeDef*      mPwmTimTypeDef;
 	TIM_HandleTypeDef mPWMTim;
 
 	GPIO_TypeDef* gPwmPort;
-	uint16_t 	 gPwmPin;
-	uint8_t 	 gAfMapingPWM;
+	uint16_t 	  gPwmPin;
+	uint8_t 	  gAfMapingPWM;
 
-	TIM_TypeDef* mEncTimTypeDef;
+	TIM_TypeDef*      mEncTimTypeDef;
 	TIM_HandleTypeDef mEncTim;
 
 	GPIO_TypeDef* gEncAPort;
-	uint16_t 	 gEncAPin;
-	uint8_t 	 gAfMapingEncA;
+	uint16_t 	  gEncAPin;
+	uint8_t 	  gAfMapingEncA;
 
 	GPIO_TypeDef* gEncBPort;
-	uint16_t     gEncBPin;
-	uint8_t 	 gAfMapingEncB;
+	uint16_t      gEncBPin;
+	uint8_t 	  gAfMapingEncB;
 
 	GPIO_TypeDef* gLimPlusPort;
-	uint16_t     gLimPlusPin;
+	uint16_t      gLimPlusPin;
 
 	GPIO_TypeDef* gLimMinusPort;
-	uint16_t 	 gLimMinusPin;
+	uint16_t 	  gLimMinusPin;
 
 	GPIO_TypeDef* gLimHomePort;
-	uint16_t 	 gLimHomePin;
+	uint16_t 	  gLimHomePin;
 
 	GPIO_TypeDef* gDirPort;
-	uint16_t 	 gDirPin;
+	uint16_t 	  gDirPin;
 
-	Motion 	  	 mMotion;
+	Motion 	  	  mMotion;
 
 	short tempStatus;
 	bool perPosMoving;
@@ -83,5 +96,8 @@ private:
 	bool ableMoving;
 	bool inverseLim;
 
+	int32_t modeMoving;
+
 };
+
 #endif /* INC_AXIS_H_ */

@@ -15,6 +15,7 @@ Remote::Remote()
 	mOnOffStatus = false;
 	mFineStatus = false;
 	mRunStatus = false;
+	mCurrentAxis = 0;
 }
 
 void Remote::checkOnOffStatus()
@@ -60,16 +61,27 @@ void Remote::checkSpeed()
 
 int Remote::getSpeedStatus()
 {
-	if ((mCurrentAdcSpeed < mAvrAdcValue + mSizeDeadZone) && (mCurrentAdcSpeed > mAvrAdcValue-mSizeDeadZone)) {return 0;}
+	int speedStatus;
 
-	else if (mCurrentAdcSpeed > mAvrAdcValue + mSizeDeadZone) {return -int(mCurrentAdcSpeed - mAvrAdcValue);}
+	if ((mCurrentAdcSpeed <= mAvrAdcValue + mSizeDeadZone) && (mCurrentAdcSpeed >= mAvrAdcValue-mSizeDeadZone)) {speedStatus = 0;}
+	else if (mCurrentAdcSpeed > mAvrAdcValue + mSizeDeadZone) {speedStatus = (-int(mCurrentAdcSpeed - mAvrAdcValue));}
+	else if (mCurrentAdcSpeed < mAvrAdcValue - mSizeDeadZone) {speedStatus = (int(mAvrAdcValue) - int(mCurrentAdcSpeed));}
 
-	else if (mCurrentAdcSpeed < mAvrAdcValue - mSizeDeadZone) {return int(2000) - int(mCurrentAdcSpeed);}
+	return speedStatus;
 }
 
 void Remote::checkNumberAxe()
 {
+	bool newAxis0 = (HAL_GPIO_ReadPin(gPortAxis0, gPinAxis0) == GPIO_PIN_SET) ? 1 : 0;
+	bool newAxis1 = (HAL_GPIO_ReadPin(gPortAxis1, gPinAxis1) == GPIO_PIN_SET) ? 1 : 0;
+	bool newAxis2 = (HAL_GPIO_ReadPin(gPortAxis2, gPinAxis2) == GPIO_PIN_SET) ? 1 : 0;
 
+	mCurrentAxis = (newAxis2 << 2) + (newAxis1 << 1) + (newAxis0 << 0);
+}
+
+short Remote::getAxisStatus()
+{
+	return mCurrentAxis;
 }
 
 void Remote::checkRemoteStatus()
@@ -78,6 +90,7 @@ void Remote::checkRemoteStatus()
 	checkRunStatus();
 	checkFineStatus();
 	checkSpeed();
+	checkNumberAxe();
 }
 
 void Remote::init(ADC_HandleTypeDef adc,
