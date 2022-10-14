@@ -22,6 +22,8 @@ extern "C"
 void initMotion();
 void startMotion();
 void checkEmgStatus();
+void RemoteMoving();
+void SoftMoving();
 
 
 #endif /* INC_MOTIONCONTROLLER_H_ */

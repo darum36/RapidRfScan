@@ -8,8 +8,9 @@
 #include <axis.h>
 
 extern void Error_Handler();
+extern Remote remoteController1;
 
-Axis::Axis():mMotion(&mPWMTim)
+Axis::Axis():mMotion(&mPWMTim, &mEncTim)
 {
 	tempStatus = 0;
 	perPosMoving = false;
@@ -17,7 +18,8 @@ Axis::Axis():mMotion(&mPWMTim)
 	homecome = false;
 	ableMoving = false;
 	inverseLim = false;
-	modeMoving = 0;
+	modeMov = 0;
+	beginMov = false;
 }
 
 short Axis::getLimStatus()
@@ -30,16 +32,23 @@ short Axis::getLimStatus()
 	short limMinusStatus = (HAL_GPIO_ReadPin(gLimMinusPort, gLimMinusPin)== GPIO_PIN_SET) ? 0 : 1;
 	short limHomeStatus = (HAL_GPIO_ReadPin(gLimHomePort, gLimHomePin)== GPIO_PIN_SET) ? 0 : 1;
 
+	if (inverseLim == true)
+	{
+		limPlusStatus=!limPlusStatus;
+		limMinusStatus=!limMinusStatus;
+		limHomeStatus=!limHomeStatus;
+	}
+
+	tempStatus = 0;
 	if (limPlusStatus) tempStatus|=(1<<indLimPlus);
-	if (limMinusStatus) tempStatus=tempStatus&(1<<indMinusPlus);
-	if (limHomeStatus) tempStatus=tempStatus&(1<<indHomePlus);
+	if (limMinusStatus) tempStatus|=(1<<indMinusPlus);
+	if (limHomeStatus) tempStatus|=(1<<indHomePlus);
 
 	return tempStatus;
 }
 
 void Axis::checkLimits()
 {
-
 	short limPlusStatus = (HAL_GPIO_ReadPin(gLimPlusPort, gLimPlusPin) == GPIO_PIN_SET) ? 0 : 1;
 	short limMinusStatus=(HAL_GPIO_ReadPin(gLimMinusPort, gLimMinusPin)== GPIO_PIN_SET) ? 0 : 1;
 	short limHomeStatus=(HAL_GPIO_ReadPin(gLimHomePort, gLimHomePin)== GPIO_PIN_SET) ? 0 : 1;
@@ -59,10 +68,10 @@ void Axis::checkLimits()
 bool Axis::checkAbleMoving()
 {
 	eDirection dir;
-	bool direct=HAL_GPIO_ReadPin(gDirPort, gDirPin);
+	bool direct = remoteController1.getSpeedStatus() < 0 ? 0 : 1;
 	(direct == 1) ? (dir = eDirection::Positive) : (dir = eDirection::Negative);
 
-	ableMoving =(((perPosMoving == true) && (dir==eDirection::Positive))||((permNegMoving == true && (dir==eDirection::Negative)))) ? true : false;
+	ableMoving =(((perPosMoving == true) && (dir == eDirection::Positive))||((permNegMoving == true && (dir == eDirection::Negative)))) ? true : false;
 
 	return (ableMoving);
 }
@@ -84,9 +93,8 @@ void Axis::setInverseLim()
 	inverseLim=true;
 }
 
-void Axis::jogging(eDirection dir)
+void Axis::jogging()
 {
-	setDirection(dir);
 	mMotion.jogging();
 }
 
@@ -101,23 +109,38 @@ void Axis::tempSetParam(float newSpeed, float newAcc, float newDcc)
 	mMotion.setSpeed(newSpeed);
 	mMotion.setAcc(newAcc);
 	mMotion.setDcc(newDcc);
-	mMotion.getSpeed();
 }
 
-void Axis::tempDefaultParam()
+void Axis::setDefaultParam()
 {
 	mMotion.setSpeed(1000000);
 	mMotion.setAcc(1000000);
 	mMotion.setDcc(1000000);
-	mMotion.setSteps(5000000);
+	mMotion.setPosition(0);
 }
+
+void Axis::updateEnc()
+{
+	mMotion.updateEnc();
+}
+
+//--------------------------------------MOVING--------------------------------------------------
+
+bool Axis::beginMoving()
+{
+	return (beginMov == true) ? true : false;
+}
+
+void Axis::begin()
+{ beginMov = true; }
+
+void Axis::stop()
+{ beginMov = false; }
 
 void Axis::emgStop()
-{
- mMotion.resetMotion();
-}
+{ mMotion.resetMotion(); }
 
-//-----------------------------------------------------------------------------------------------
+//--------------------------------------READ----------------------------------------------
 
 int32_t Axis::getSpeed()
 {
@@ -137,12 +160,18 @@ int32_t Axis::getDcc()
 	return axisDcc;
 }
 
-int32_t Axis::getModeMoving()
+int32_t Axis::modeMoving()
 {
-	return int32_t(modeMoving);
+	return int32_t(modeMov);
 }
 
-//-----------------------------------------------------------------------------------------------
+int32_t Axis::getPosition()
+{
+	int32_t position = mMotion.getPosition();
+	return position;
+}
+
+//--------------------------------------SET----------------------------------------------------
 
 void Axis::setSpeed(int32_t newSpeed)
 {
@@ -164,10 +193,15 @@ void Axis::setDcc(int32_t newDcc)
 
 void Axis::setModeMoving(int32_t MM)
 {
-	modeMoving = MM;
+	modeMov = MM;
 }
 
-//-----------------------------------------------------------------------------------------------
+void Axis::setPosition(int32_t newPosition)
+{
+	mMotion.setPosition(newPosition);
+}
+
+//---------------------------------------INIT---------------------------------------------------
 
 void Axis::init(TIM_TypeDef* PWMTim, GPIO_TypeDef* portPWM, uint16_t pinPWM, uint8_t afMapingPWM,             		 	// PWM
 		TIM_TypeDef* EncTim,  GPIO_TypeDef* portEncA, uint16_t pinEncA, uint8_t afMapingEncA,    		 				// TIM ENCA
@@ -196,7 +230,7 @@ void Axis::init(TIM_TypeDef* PWMTim, GPIO_TypeDef* portPWM, uint16_t pinPWM, uin
 	gLimHomePin=pinLimHome;
 	gDirPort=portDir;
 	gDirPin=pinDir;
-	Motion mMotion(&mPWMTim);
+	Motion mMotion(&mPWMTim, &mEncTim);
 
 	/* Шим сигнал  */
 
@@ -267,6 +301,8 @@ void Axis::init(TIM_TypeDef* PWMTim, GPIO_TypeDef* portPWM, uint16_t pinPWM, uin
 	{
 		Error_Handler();
 	}
+
+	HAL_TIM_Encoder_Start(&mEncTim, TIM_CHANNEL_ALL);
 
 	GPIO_InitStruct = {0};
 

@@ -21,10 +21,29 @@
 extern "C" {
 #endif
 
+struct Packet
+{
+	char cAxis;
+	uint8_t iAxis;
+	char command[2] = {};
+	int arrayIndex = 0;
+	bool arrayCommand = false;
+	double dValue = 0;
+	int32_t iValue = 0;
+
+	bool getAxis = false;
+	bool getCommand = false;
+	bool getArrayIndex = false;
+	bool getValue = false;
+	bool getEndPacket = false;
+};
+
 void initUart();
 void USART1_IRQHandler(void);
 void checkUARTbuffer();
 void Send_String (UART_HandleTypeDef *huart, char _out[]);
+void Send_Char (UART_HandleTypeDef *huart, char* _out);
+void TIM4_IRQHandler(void);
 
 #ifdef __cplusplus
 }

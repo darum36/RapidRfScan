@@ -25,9 +25,13 @@ public:
 	short getLimStatus();
 	void checkLimits();
 	bool checkAbleMoving();
+
+	void begin();
+	void stop();
+	bool beginMoving();
 	void emgStop();
 
-	void jogging(eDirection dir);
+	void jogging();
 	void ptp(eDirection dir);
 
 	void setDirection(eDirection dir);
@@ -36,15 +40,18 @@ public:
 	int32_t getSpeed();
 	int32_t getAcc();
 	int32_t getDcc();
-	int32_t getModeMoving();
+	int32_t modeMoving();
+	int32_t getPosition();
 
 	void setSpeed(int32_t newSpeed);
 	void setAcc(int32_t newAcc);
 	void setDcc(int32_t newDcc);
 	void setModeMoving(int32_t MM);
+	void setPosition(int32_t newPosition);
+	void updateEnc();
 
 	void tempSetParam(float newSpeed, float newAcc, float newDcc);
-	void tempDefaultParam();
+	void setDefaultParam();
 	void init(TIM_TypeDef* PWMTim,																	// PWM
 			  GPIO_TypeDef* portPWM, uint16_t pinPWM, uint8_t afMapingPWM,             		 		// PWM
 			  TIM_TypeDef* EncTim,																	// TIM ENC
@@ -95,8 +102,8 @@ private:
 	bool homecome;
 	bool ableMoving;
 	bool inverseLim;
-
-	int32_t modeMoving;
+	int32_t modeMov;
+	bool beginMov;
 
 };
 

@@ -3,6 +3,7 @@
 
 extern TIM_HandleTypeDef htim10;
 extern UART_HandleTypeDef huart1;
+extern TIM_HandleTypeDef timeoutTim;
 
 void NMI_Handler(void)
 {

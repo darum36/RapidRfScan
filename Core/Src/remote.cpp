@@ -15,6 +15,7 @@ Remote::Remote()
 	mOnOffStatus = false;
 	mFineStatus = false;
 	mRunStatus = false;
+	mCurrentAdcSpeed = 0;
 	mCurrentAxis = 0;
 }
 

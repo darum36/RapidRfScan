@@ -9,10 +9,12 @@
 
 CRC_HandleTypeDef hcrc;
 extern TIM_HandleTypeDef htim10;
+extern TIM_HandleTypeDef timeoutTim;
 
 static void MX_GPIO_Init(void);
 static void MX_CRC_Init(void);
 static void MX_TIM10_Init(void);
+static void timeoutTimInit(void);
 
 void initHardware()
 
@@ -39,6 +41,7 @@ void initHardware()
 	MX_GPIO_Init();
 	MX_CRC_Init();
 	MX_TIM10_Init();
+	timeoutTimInit();
 }
 
 void SystemClock_Config(void)
@@ -140,22 +143,37 @@ static void MX_GPIO_Init(void)
 
 static void MX_TIM10_Init(void)
 {
-  htim10.Instance = TIM10;
-  htim10.Init.Prescaler = 99;
-  htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim10.Init.Period = 1000;
-  htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+	htim10.Instance = TIM10;
+	htim10.Init.Prescaler = 99;
+	htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
+	htim10.Init.Period = 1000;
+	htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+	htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
 
-  if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
-  {
-    Error_Handler();
-  }
+	if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
+	{ Error_Handler(); }
 
-  HAL_NVIC_SetPriority(TIM1_UP_TIM10_IRQn, 2, 0);
-  HAL_NVIC_EnableIRQ(TIM1_UP_TIM10_IRQn);
-	HAL_TIM_Base_Start_IT(&htim10);
-  }
+	HAL_NVIC_SetPriority (TIM1_UP_TIM10_IRQn, 1, 0);
+	HAL_NVIC_EnableIRQ (TIM1_UP_TIM10_IRQn);
+	HAL_TIM_Base_Start_IT (&htim10);
+ }
+
+static void timeoutTimInit(void)
+{
+	timeoutTim.Instance = TIM4;
+	timeoutTim.Init.Prescaler = 64000-1;
+	timeoutTim.Init.CounterMode = TIM_COUNTERMODE_UP;
+	timeoutTim.Init.Period = 3000;
+	timeoutTim.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+	timeoutTim.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+
+	if (HAL_TIM_Base_Init(&timeoutTim) != HAL_OK)
+	{ Error_Handler(); }
+
+	HAL_NVIC_SetPriority (TIM4_IRQn, 2, 1);
+	HAL_NVIC_EnableIRQ (TIM4_IRQn);
+	HAL_TIM_Base_Start_IT (&timeoutTim);
+}
 
 void Error_Handler(void)
 {
