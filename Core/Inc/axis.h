@@ -31,11 +31,26 @@ public:
 	bool beginMoving();
 	void emgStop();
 
-	void jogging();
-	void ptp(eDirection dir);
+	void jogging(bool beginJog);
+	void ptp();
 
 	void setDirection(eDirection dir);
-	void setInverseLim();
+	int getDirection();
+
+	void setTurnOnAxis (int32_t newTurnOnAxis);
+	int32_t getTurnOnAxis();
+
+	void setInverseLim(int32_t newInverseLim);
+	int32_t getInverseLim();
+
+	void setEnableLim(int32_t newEnableLim);
+	int32_t getEnableLim();
+
+	void setInverseEncoder(int32_t newInveseEnc);
+	int32_t getInverseEncoder();
+
+	void setInverseMotor(int32_t newInverseMot);
+	int32_t getInverseMotor();
 
 	int32_t getSpeed();
 	int32_t getAcc();
@@ -73,6 +88,7 @@ private:
 
 	TIM_TypeDef*      mEncTimTypeDef;
 	TIM_HandleTypeDef mEncTim;
+	TIM_Encoder_InitTypeDef sConfigEnc;
 
 	GPIO_TypeDef* gEncAPort;
 	uint16_t 	  gEncAPin;
@@ -101,7 +117,13 @@ private:
 	bool permNegMoving;
 	bool homecome;
 	bool ableMoving;
-	bool inverseLim;
+
+	int32_t turnOnAxis;
+	int32_t inverseLim;
+	int32_t inverseEnc;
+	int32_t inverseMot;
+	int32_t enableLim;
+
 	int32_t modeMov;
 	bool beginMov;
 

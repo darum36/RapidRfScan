@@ -18,6 +18,8 @@ mPWMTim(PWMTim), mEncTim(EncTim)
 {
 	mMovingTime = 0;
 	mPrevEncValue = __HAL_TIM_GetCounter(mEncTim);
+	mCountOfTurns = 0;
+	mPosition = 0;
 }
 
 void Motion::acceleration() 										// Ускорение
@@ -98,7 +100,7 @@ bool Motion::motorOn()
 	return (mPWMTim->Instance->CR1 & 1) ? true : false;
 }
 
-void Motion::jogging()								/* Движение при нажатой кнопке */
+void Motion::jogging(bool beginJog)								/* Движение при нажатой кнопке */
 {
 	float deltaSpeedAcc=mAcc/double(1000);
 	float deltaSpeedDcc=mDcc/double(1000);
@@ -106,9 +108,9 @@ void Motion::jogging()								/* Движение при нажатой кноп
 
 	if (!motorOn()) {mCurrentSpeed = 0;}
 
-	if ((mCurrentSpeed > 0) || (remoteController1.getRunStatus() == true) || (axis[uartPacket.iAxis].beginMoving() == true))															/* Пока скорость больше нуля или нажата кнопка */ 		/*!!!!!!!!!!!!! Необходимо вписать номер порта и пина для кнопки!!!!!!!!!!!!!!!!! */
+	if ((mCurrentSpeed > 0) || (remoteController1.getRunStatus() == true) || (beginJog))															/* Пока скорость больше нуля или нажата кнопка */ 		/*!!!!!!!!!!!!! Необходимо вписать номер порта и пина для кнопки!!!!!!!!!!!!!!!!! */
 	{
-		if ((remoteController1.getRunStatus() == true) || (axis[uartPacket.iAxis].beginMoving() == true))																		/* Если кнопка нажата */								/*!!!!!!!!!!!!! Необходимо вписать номер порта и пина для кнопки!!!!!!!!!!!!!!!!! */
+		if ((remoteController1.getRunStatus() == true) || (beginJog))																		/* Если кнопка нажата */								/*!!!!!!!!!!!!! Необходимо вписать номер порта и пина для кнопки!!!!!!!!!!!!!!!!! */
 		{
 			if (mCurrentSpeed > 0)																			/* Проверка стартуем ли мы, нужно ли включать моторы */
 			{
@@ -171,69 +173,65 @@ void Motion::jogging()								/* Движение при нажатой кноп
 
 void Motion::ptp()                                                                       /* Движение на заданное количество шагов */
 {
-float deltaSpeedAcc=mAcc/float(1000);
-float deltaSpeedDcc=mDcc/float(1000);
-uint32_t currentPeriod;
-uint64_t Steps_deltaV;
+	float deltaSpeedAcc=mAcc/float(1000);
+	float deltaSpeedDcc=mDcc/float(1000);
+	uint32_t currentPeriod;
+	uint64_t Steps_deltaV;
 
-if (!motorOn()) {mCurrentSpeed=0;}
+	if (!motorOn()) {mCurrentSpeed = 0;}
 
-if (mMovingTime == 0)
-{
-	Steps_deltaV=round((((deltaSpeedAcc+deltaSpeedDcc)/float(2))+mSpeed)*mSpeed/mAcc);
-
-	if (mSteps<Steps_deltaV)
+	if (mMovingTime == 0)
 	{
-		PtPModeMoving = ModeMoving::LowSpeed;
+		Steps_deltaV = round((((deltaSpeedAcc+deltaSpeedDcc)/float(2))+mSpeed)*mSpeed/mAcc);
 
-		mCurrentSpeed=1000;
-		mMovingTime=round(float(mSteps)*float(1000)/mCurrentSpeed);
-		currentPeriod=round(float(100000000)/mCurrentSpeed);
+		if (mSteps < Steps_deltaV)
+		{
+			PtPModeMoving = ModeMoving::LowSpeed;
 
-		__HAL_TIM_SET_COMPARE(mPWMTim,TIM_CHANNEL_1,currentPeriod/2+1);
-		__HAL_TIM_SET_AUTORELOAD(mPWMTim, currentPeriod);
-		HAL_TIM_PWM_Start(mPWMTim, TIM_CHANNEL_1);
+			mCurrentSpeed = 1000;
+			mMovingTime = round(float(mSteps)*float(1000)/mCurrentSpeed);
+			currentPeriod = round(float(100000000)/mCurrentSpeed);
+
+			__HAL_TIM_SET_COMPARE(mPWMTim,TIM_CHANNEL_1,currentPeriod/2+1);
+			__HAL_TIM_SET_AUTORELOAD(mPWMTim, currentPeriod);
+			HAL_TIM_PWM_Start(mPWMTim, TIM_CHANNEL_1);
+		}
+		else
+		{
+			PtPModeMoving = ModeMoving::NormalSpeed;
+
+			mMovingSteps = mSteps-Steps_deltaV;
+			mMovingTime = mMovingSteps*1000/uint64_t(round(mSpeed));
+		}
 	}
 	else
 	{
-		PtPModeMoving = ModeMoving::NormalSpeed;
-
-		mMovingSteps=mSteps-Steps_deltaV;
-		mMovingTime=mMovingSteps*1000/uint64_t(round(mSpeed));
-	}
-}
-else
-{
-	if (PtPModeMoving == ModeMoving::LowSpeed)
-	{
-		if (mMovingTime>0)
+		if (PtPModeMoving == ModeMoving::LowSpeed)
 		{
-			moving();
-		}
-		else
-		{
-			resetMotion();
-		}
-	}
-	else if (PtPModeMoving == ModeMoving::NormalSpeed)
-	{
-		if (mMovingTime>0)
-		{
-			if (mCurrentSpeed < mSpeed)
-			{
-				acceleration();
-			}
-			else
+			if (mMovingTime > 0)
 			{
 				moving();
 			}
+			else
+			{
+				resetMotion();
+			}
 		}
-		else
+		else if (PtPModeMoving == ModeMoving::NormalSpeed)
 		{
-			deceleration();
+			if (mMovingTime > 0)
+			{
+				if (mCurrentSpeed < mSpeed)
+				{
+					acceleration();
+				}
+				else
+				{ moving(); }
+			}
+			else
+			{ deceleration(); }
 		}
 	}
-}
 }
 
 void Motion::setSpeed(float newSpeed)
@@ -289,13 +287,12 @@ void Motion::setSteps(uint64_t newSteps)
 void Motion::resetMotion()
 {
 	HAL_TIM_PWM_Stop(mPWMTim, TIM_CHANNEL_1);
-	mCurrentSpeed=0;
+	mCurrentSpeed = 0;
 }
 
 void Motion::setPosition(int32_t newPosition)
 {
 	mPosition = newPosition;
-
 }
 
 int32_t Motion::getPosition()
@@ -305,9 +302,14 @@ int32_t Motion::getPosition()
 
 void Motion::updateEnc()
 {
-	int32_t currentEncValue = __HAL_TIM_GET_COUNTER(mEncTim);
-
+	uint16_t currentEncValue = __HAL_TIM_GET_COUNTER(mEncTim);
 	int32_t shift = currentEncValue - mPrevEncValue;
+
+	if (shift > 10000)
+	{ shift = -((65535 - currentEncValue) + mPrevEncValue); }
+	else if (shift < -10000)
+	{ shift = (65535 - mPrevEncValue) + currentEncValue; }
+
 	mPrevEncValue = currentEncValue;
-	mPosition += shift;
+	mPosition = mPosition + shift;
 }

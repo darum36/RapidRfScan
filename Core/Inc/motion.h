@@ -31,7 +31,7 @@ public:
 	Motion(TIM_HandleTypeDef* PWMTim, TIM_HandleTypeDef* EncTim);
 	virtual ~Motion()=default;
 
-	void jogging();
+	void jogging(bool beginJog);
 	void ptp();
 
 	void setSpeed(float newSpeed);
@@ -59,7 +59,8 @@ private:
 	float mDcc;
 	uint64_t mSteps;
 	int32_t mPosition;
-	int32_t mPrevEncValue;
+	uint16_t mPrevEncValue;
+	int32_t mCountOfTurns;
 
 	uint64_t mMovingTime;
 	uint64_t mMovingSteps;

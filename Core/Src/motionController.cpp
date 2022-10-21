@@ -21,7 +21,7 @@ Remote remoteController1;
 TIM_HandleTypeDef htim10;
 ADC_HandleTypeDef hadc1;
 extern Packet uartPacket;
-
+extern bool wrongBoardID;
 uint8_t boardID;
 bool emgStatus = HAL_GPIO_ReadPin(Emergency_status_GPIO_Port, Emergency_status_Pin);
 
@@ -86,11 +86,11 @@ void RemoteMoving()
 							axis[rcCurrentAxis].tempSetParam(100000, 1000000, 1000000);
 							if (rcNewSpeed > 0)
 							{ 	axis[rcCurrentAxis].setDirection(eDirection::Positive);
-								axis[rcCurrentAxis].jogging();
+								axis[rcCurrentAxis].jogging(1);
 							}
 							else if (rcNewSpeed < 0)
 							{ 	axis[rcCurrentAxis].setDirection(eDirection::Negative);
-								axis[rcCurrentAxis].jogging();
+								axis[rcCurrentAxis].jogging(1);
 							}
 						}
 						else
@@ -98,10 +98,10 @@ void RemoteMoving()
 							axis[rcCurrentAxis].tempSetParam(float(abs(rcNewSpeed)*700), 1000000, 1000000);
 							if (rcNewSpeed > 0)
 							{ 	axis[rcCurrentAxis].setDirection(eDirection::Positive);
-								axis[rcCurrentAxis].jogging(); }
+								axis[rcCurrentAxis].jogging(1); }
 							else if (rcNewSpeed < 0)
 							{ 	axis[rcCurrentAxis].setDirection(eDirection::Negative);
-								axis[rcCurrentAxis].jogging();
+								axis[rcCurrentAxis].jogging(1);
 							}
 						}
 					}
@@ -113,19 +113,54 @@ void RemoteMoving()
 
 void SoftMoving()
 {
-	if ((axis[uartPacket.iAxis].checkAbleMoving() == false)||(emgStatus == true))
-		{ axis[uartPacket.iAxis].emgStop(); }
-	else
+	if (wrongBoardID == false)
 	{
-		if (axis[uartPacket.iAxis].modeMoving() == 0)
+		if (boardID == 1)
+		{
+			for (unsigned int i = 0; i < 2; i++)
 			{
-//			axis[uartPacket.iAxis].ptp(eDirection::Positive);
+				if ((axis[i].checkAbleMoving() == false) || (emgStatus == true))
+				{ axis[i].emgStop(); }
+				else
+				{
+					if (axis[i].modeMoving() == 0)
+					{ }
+					else if (axis[i].modeMoving() == 1)
+					{ axis[i].jogging(axis[i].beginMoving()); }
+				}
 			}
-
-		else if (axis[uartPacket.iAxis].modeMoving() == 1)
-		{ axis[uartPacket.iAxis].jogging(); }
+		}
+		else if (boardID == 2)
+				{
+					for (unsigned int i = 2; i < 4; i++)
+					{
+						if ((axis[i].checkAbleMoving() == false) || (emgStatus == true))
+						{ axis[i].emgStop(); }
+						else
+						{
+							if (axis[i].modeMoving() == 0)
+							{ }
+							else if (axis[i].modeMoving() == 1)
+							{ axis[i].jogging(axis[i].beginMoving()); }
+						}
+					}
+				}
 	}
 }
+//		if ((axis[uartPacket.iAxis].checkAbleMoving() == false) || (emgStatus == true))
+//		{ axis[uartPacket.iAxis].emgStop(); }
+//		else
+//		{
+//			if (axis[uartPacket.iAxis].modeMoving() == 0)
+//			{
+//		//			axis[uartPacket.iAxis].ptp(eDirection::Positive);
+//			}
+//
+//			else if (axis[uartPacket.iAxis].modeMoving() == 1)
+//			{ axis[uartPacket.iAxis].jogging(); }
+//		}
+//	}
+//}
 
 void checkEmgStatus()
 {
@@ -148,7 +183,12 @@ void initMotion()
 			     LIM_HOME_1_GPIO_Port, LIM_HOME_1_Pin,		        // GPIOs LIMIT
 			     DIR1_GPIO_Port, DIR1_Pin);							// GPIOs DIR
 
-	axis[axisIndex].setInverseLim();
+	axis[axisIndex].setTurnOnAxis(1);
+	axis[axisIndex].setInverseLim(7);
+	axis[axisIndex].setEnableLim(7);
+	axis[axisIndex].setInverseMotor(0);
+	axis[axisIndex].setInverseEncoder(0);
+
 
 	axis[axisIndex + 1].init(TIM5,
 				 STEP2_GPIO_Port, STEP2_Pin, GPIO_AF2_TIM5,			// PWM
@@ -167,4 +207,10 @@ void initMotion()
 						   AXIS0_GPIO_Port, AXIS0_Pin,
 						   AXIS1_GPIO_Port, AXIS1_Pin,
 						   AXIS2_GPIO_Port, AXIS2_Pin);
+
+	axis[axisIndex + 1].setTurnOnAxis(1);
+	axis[axisIndex + 1].setInverseLim(0);
+	axis[axisIndex + 1].setEnableLim(7);
+	axis[axisIndex + 1].setInverseMotor(0);
+	axis[axisIndex + 1].setInverseEncoder(0);
 }

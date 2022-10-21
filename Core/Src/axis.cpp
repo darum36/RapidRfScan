@@ -17,10 +17,17 @@ Axis::Axis():mMotion(&mPWMTim, &mEncTim)
 	permNegMoving = false ;
 	homecome = false;
 	ableMoving = false;
-	inverseLim = false;
+
+	turnOnAxis = 0;
+	inverseLim = 0;
+	inverseEnc = 0;
+	inverseMot = 0;
+	enableLim = 0;
+
 	modeMov = 0;
 	beginMov = false;
 }
+
 
 short Axis::getLimStatus()
 {
@@ -32,12 +39,9 @@ short Axis::getLimStatus()
 	short limMinusStatus = (HAL_GPIO_ReadPin(gLimMinusPort, gLimMinusPin)== GPIO_PIN_SET) ? 0 : 1;
 	short limHomeStatus = (HAL_GPIO_ReadPin(gLimHomePort, gLimHomePin)== GPIO_PIN_SET) ? 0 : 1;
 
-	if (inverseLim == true)
-	{
-		limPlusStatus=!limPlusStatus;
-		limMinusStatus=!limMinusStatus;
-		limHomeStatus=!limHomeStatus;
-	}
+	if (((inverseLim >> 0) & 1) == 1) { limPlusStatus =! limPlusStatus; }
+	if (((inverseLim >> 1) & 1) == 1) { limMinusStatus =! limMinusStatus; }
+	if (((inverseLim >> 2) & 1) == 1) { limHomeStatus =! limHomeStatus; }
 
 	tempStatus = 0;
 	if (limPlusStatus) tempStatus|=(1<<indLimPlus);
@@ -53,16 +57,13 @@ void Axis::checkLimits()
 	short limMinusStatus=(HAL_GPIO_ReadPin(gLimMinusPort, gLimMinusPin)== GPIO_PIN_SET) ? 0 : 1;
 	short limHomeStatus=(HAL_GPIO_ReadPin(gLimHomePort, gLimHomePin)== GPIO_PIN_SET) ? 0 : 1;
 
-	if (inverseLim == true)
-	{
-		limPlusStatus=!limPlusStatus;
-		limMinusStatus=!limMinusStatus;
-		limHomeStatus=!limHomeStatus;
-	}
+	if (((inverseLim >> 0) & 1) == 1) { limPlusStatus =! limPlusStatus; }
+	if (((inverseLim >> 1) & 1) == 1) { limMinusStatus =! limMinusStatus; }
+	if (((inverseLim >> 2) & 1) == 1) { limHomeStatus =! limHomeStatus; }
 
-	perPosMoving = (limPlusStatus) ? false : true;
-	permNegMoving =(limMinusStatus) ? false : true;
-	homecome = (limHomeStatus) ? true : false;
+	perPosMoving = (!limPlusStatus || (!((enableLim >> 0) & 1))) ? true : false;
+	permNegMoving = (!limMinusStatus || (!((enableLim >> 1) & 1))) ? true : false;
+	homecome = (!limHomeStatus || (!((enableLim >> 2) & 1))) ? false : true;
 }
 
 bool Axis::checkAbleMoving()
@@ -76,31 +77,79 @@ bool Axis::checkAbleMoving()
 	return (ableMoving);
 }
 
+
 void Axis::setDirection(eDirection dir)
 {
+	if (inverseMot == 0)
+	{
 		if (dir == eDirection::Positive)
-		{
-			HAL_GPIO_WritePin(gDirPort, gDirPin, GPIO_PIN_SET);
-		}
+		{ HAL_GPIO_WritePin(gDirPort, gDirPin, GPIO_PIN_SET); }
 		else
-		{
-			HAL_GPIO_WritePin(gDirPort, gDirPin, GPIO_PIN_RESET);
-		}
+		{ HAL_GPIO_WritePin(gDirPort, gDirPin, GPIO_PIN_RESET); }
+	}
+	else
+	{
+		if (dir == eDirection::Positive)
+		{ HAL_GPIO_WritePin(gDirPort, gDirPin, GPIO_PIN_RESET); }
+		else
+		{ HAL_GPIO_WritePin(gDirPort, gDirPin, GPIO_PIN_SET); }
+	}
 }
 
-void Axis::setInverseLim()
+int Axis::getDirection()
 {
-	inverseLim=true;
+	int direction;
+	direction = (HAL_GPIO_ReadPin(gDirPort, gDirPin) == GPIO_PIN_SET) ? 1 : -1;
+	return direction;
 }
 
-void Axis::jogging()
+
+void Axis::setTurnOnAxis( int32_t newTurnOnAxis)
+{ turnOnAxis = newTurnOnAxis; }
+
+int32_t Axis::getTurnOnAxis()
+{ return turnOnAxis; }
+
+//--------------------------------------INVERSE--------------------------------------------------
+
+void Axis::setInverseLim(int32_t newInverseLim)
+{ inverseLim = newInverseLim; }
+
+int32_t Axis::getInverseLim()
+{ return inverseLim; }
+
+
+void Axis::setEnableLim(int32_t newEnableLim)
+{ enableLim = newEnableLim; }
+
+int32_t Axis::getEnableLim()
+{ return enableLim; }
+
+
+void Axis::setInverseEncoder(int32_t newInveseEnc)
 {
-	mMotion.jogging();
+	inverseEnc = newInveseEnc;
+	sConfigEnc.IC1Polarity = inverseEnc ? TIM_ICPOLARITY_FALLING : TIM_ICPOLARITY_RISING;
+	HAL_TIM_Encoder_Init(&mEncTim, &sConfigEnc);
 }
 
-void Axis::ptp(eDirection dir)
+int32_t Axis::getInverseEncoder()
+{ return inverseEnc; }
+
+
+void Axis::setInverseMotor(int32_t newInverseMot)
+{ inverseMot = newInverseMot; }
+
+int32_t Axis::getInverseMotor()
+{ return inverseMot; }
+
+//-----------------------------------------------------------------------------------------------
+
+void Axis::jogging(bool beginJog)
+{ mMotion.jogging(beginJog); }
+
+void Axis::ptp()
 {
-	setDirection(dir);
 	mMotion.ptp();
 }
 
@@ -117,19 +166,16 @@ void Axis::setDefaultParam()
 	mMotion.setAcc(1000000);
 	mMotion.setDcc(1000000);
 	mMotion.setPosition(0);
+
 }
 
 void Axis::updateEnc()
-{
-	mMotion.updateEnc();
-}
+{ mMotion.updateEnc(); }
 
 //--------------------------------------MOVING--------------------------------------------------
 
 bool Axis::beginMoving()
-{
-	return (beginMov == true) ? true : false;
-}
+{ return (beginMov == true) ? true : false; }
 
 void Axis::begin()
 { beginMov = true; }
@@ -161,9 +207,7 @@ int32_t Axis::getDcc()
 }
 
 int32_t Axis::modeMoving()
-{
-	return int32_t(modeMov);
-}
+{ return int32_t(modeMov); }
 
 int32_t Axis::getPosition()
 {
@@ -192,14 +236,10 @@ void Axis::setDcc(int32_t newDcc)
 }
 
 void Axis::setModeMoving(int32_t MM)
-{
-	modeMov = MM;
-}
+{ modeMov = MM; }
 
 void Axis::setPosition(int32_t newPosition)
-{
-	mMotion.setPosition(newPosition);
-}
+{ mMotion.setPosition(newPosition); }
 
 //---------------------------------------INIT---------------------------------------------------
 
@@ -272,7 +312,7 @@ void Axis::init(TIM_TypeDef* PWMTim, GPIO_TypeDef* portPWM, uint16_t pinPWM, uin
 	HAL_GPIO_Init(gPwmPort, &GPIO_InitStruct);
 
 	/* Энкодер  */
-	TIM_Encoder_InitTypeDef sConfig = {0};
+	sConfigEnc = {0};
 	sMasterConfig = {0};
 
 	mEncTim.Instance = mEncTimTypeDef;
@@ -281,27 +321,28 @@ void Axis::init(TIM_TypeDef* PWMTim, GPIO_TypeDef* portPWM, uint16_t pinPWM, uin
 	mEncTim.Init.Period = 65535;
 	mEncTim.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
 	mEncTim.Init.RepetitionCounter = 0;
-	mEncTim.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-	sConfig.EncoderMode = TIM_ENCODERMODE_TI1;
-	sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
-	sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
-	sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
-	sConfig.IC1Filter = 0;
-	sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
-	sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
-	sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
-	sConfig.IC2Filter = 0;
-	if (HAL_TIM_Encoder_Init(&mEncTim, &sConfig) != HAL_OK)
+	mEncTim.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+	sConfigEnc.EncoderMode = TIM_ENCODERMODE_TI12;
+	sConfigEnc.IC1Polarity = TIM_ICPOLARITY_RISING;
+	sConfigEnc.IC1Selection = TIM_ICSELECTION_DIRECTTI;
+	sConfigEnc.IC1Prescaler = TIM_ICPSC_DIV2;
+	sConfigEnc.IC1Filter = 15;
+	sConfigEnc.IC2Polarity = TIM_ICPOLARITY_RISING;
+	sConfigEnc.IC2Selection = TIM_ICSELECTION_DIRECTTI;
+	sConfigEnc.IC2Prescaler = TIM_ICPSC_DIV2;
+	sConfigEnc.IC2Filter = 15;
+	if (HAL_TIM_Encoder_Init(&mEncTim, &sConfigEnc) != HAL_OK)
 	{
 		Error_Handler();
 	}
+
 	sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
 	sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
 	if (HAL_TIMEx_MasterConfigSynchronization(&mEncTim, &sMasterConfig) != HAL_OK)
 	{
 		Error_Handler();
 	}
-
+	__HAL_TIM_SET_COUNTER(&mEncTim,0);
 	HAL_TIM_Encoder_Start(&mEncTim, TIM_CHANNEL_ALL);
 
 	GPIO_InitStruct = {0};

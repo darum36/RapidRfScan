@@ -19,7 +19,7 @@ unsigned char currentCommandByte = 0;
 volatile bool getValue = false;
 volatile bool RunCommand = false;
 volatile bool getAxis = false;
-char commandBuf[2];
+char commandBuf[3];
 char valueBuf[9];
 uint8_t commandLenght = 0;
 uint8_t valueLenght = 0;
@@ -32,10 +32,12 @@ bool checkingTimeError = false;
 bool error = false;
 bool readStatus = false;
 
+bool wrongBoardID = true;
+
 Packet uartPacket;
 
 constexpr char BOARD_ID[] = "BID";
-//constexpr char SWTICH_ON_AXIS[] = "MO";
+constexpr char SWTICH_ON_AXIS[] = "MO";
 constexpr char MODE_MOTION[] = "MM";
 constexpr char SPEED[] = "SP";
 constexpr char ACCELERATION[] = "AC";
@@ -47,11 +49,13 @@ constexpr char MOTOR_IMPULSE_PER_SI_UNIT[] = "SC";
 constexpr char ENCODER_COUNTS_PER_SI_UNIT[] = "EC";
 //constexpr char FEEDBACK[] = "NC";
 //constexpr char MAX_ERROR_POSITION[] = "ER";
-//constexpr char INVERSE_ENCODER[] = "IE";
-//constexpr char INVERSE_MOTOR_ROTATION[] = "IM";
-//constexpr char LIMIT_TRIGGER_LOGIC[] = "LP";
-//constexpr char LIMIT_ENABLE[] = "LE";
+
+constexpr char INVERSE_ENCODER[] = "IE";
+constexpr char INVERSE_MOTOR_ROTATION[] = "IM";
+constexpr char LIMIT_TRIGGER_LOGIC[] = "LP";
+constexpr char LIMIT_ENABLE[] = "LE";
 constexpr char LIMIT_STATUS[] = "LS";
+
 //constexpr char ENABLE_COMPARE_FUNCTION[] = "PG[0]";
 //constexpr char COMPARE_MODE[] = "PG[1]";
 //constexpr char SPACE_OR_COMPARE[] = "PG[2]";
@@ -59,6 +63,7 @@ constexpr char LIMIT_STATUS[] = "LS";
 //constexpr char COMPARE_FUNCTION_LAST_POINT[] = "PG[4]";
 //constexpr char COMPARE_FUNCTION_POINT_ARRAY[] = "AR[100_000]";
 //constexpr char PWM_FREQUENCY[] = "SF";
+//constexpr char EMERGENCY_STOP_CAUSE[] = "EM";
 //constexpr char MOTOR_CONTROL_FAULT[] = "MF";
 //constexpr char MOTION_STATUS[] = "MS";
 //constexpr char POSITION_ERROR[] = "PE";
@@ -67,13 +72,8 @@ constexpr char LIMIT_STATUS[] = "LS";
 //constexpr char CURRENT_DECELERATION[] = "ID";
 constexpr char BEGIN_MOVING[] = "BG";
 constexpr char STOP_MOVING[] = "ST";
-//constexpr char EMERGENCY_STOP[] = "AB";
+constexpr char EMERGENCY_STOP[] = "AB";
 //constexpr char FIND_HOME[] = "FH";
-
-//constexpr char HIGH_SOFTWARE_LIMIT[] = "HL";
-//constexpr char LOW_SOFTWARE_LIMIT[] = "LL";
-//constexpr char MOTOR_STATUS[] = "MO";
-//constexpr char EMERGENCY_STOP_CAUSE[] = "EM";
 
 void initUart()
 {
@@ -136,274 +136,384 @@ void handlerPacket ()
 
 void checkUARTbuffer()
 {
-	if ((!uartBuffer.IsEmpty()) && (!uartPacket.getEndPacket))
+	if (error == false)
 	{
-		uartBuffer.Read(currentCommandByte);
-	  	if (currentCommandByte != '\n')
-	  	{
-	  		if (uartPacket.getValue)
-	  		{
-	  			if (currentCommandByte < '0' || currentCommandByte > '9')
-	  			{
-	  				error = true;
-	  			  	Send_String(&huart1,(char *)("Error Value"));
-	  			}
+		if ((!uartBuffer.IsEmpty()) && (!uartPacket.getEndPacket))
+		{
+			uartBuffer.Read(currentCommandByte);
+			if (currentCommandByte != '\n')
+			{
+				if (uartPacket.getValue)
+				{
+					if (currentCommandByte < '0' || currentCommandByte > '9')
+					{
+						if (currentCommandByte != '-')
+						{ error = true;
+						  Send_String(&huart1,(char *)("ERROR: Wrong Value\n")); }
+					}
+					valueBuf[valueLenght] = currentCommandByte;
+					valueLenght++;
+				}
+				if ((currentCommandByte != '=') && (!uartPacket.getValue))
+				{
+					if (!uartPacket.getAxis)
+					{ uartPacket.cAxis = currentCommandByte;
+					uartPacket.getAxis = true; }
+					else
+					{
+						if (commandLenght > 2)
+						{ error = true;
+						Send_String(&huart1,(char *)("ERROR: Miss =\n")); }
 
-	  			valueBuf[valueLenght] = currentCommandByte;
-	  			valueLenght++;
-	  		}
+						commandBuf[commandLenght] = currentCommandByte;
+						commandLenght++;
+					}
+				}
+				else
+				{ uartPacket.getValue = true;
+				commandValue = false; }
 
-	  		if ((currentCommandByte != '=') && (!uartPacket.getValue))
-	  		{
-	  			if (!uartPacket.getAxis)
-	  			{
-	  				uartPacket.cAxis = currentCommandByte;
-	  				uartPacket.getAxis = true;
-	  			}
-
-	  			else
-	  			{
-	  				if (commandLenght > 2)
-	  				{
-	  					error = true;
-	  					Send_String(&huart1,(char *)("Miss ="));
-	  				}
-
-	  				commandBuf[commandLenght] = currentCommandByte;
-	  				commandLenght++;
-	  			}
-	  		}
-
-	  		else
-	  		{
-	  			uartPacket.getValue = true;
-	  			commandValue = false;
-	  		}
-
-	  		checkingTimeError = true;
-	  	}
-
-	  	else
-	  	{
-	  		uartPacket.getEndPacket = true;
-	  		checkingTimeError = false;
-	  	}
+				checkingTimeError = true;
+			}
+			else
+			{ uartPacket.getEndPacket = true;
+			  checkingTimeError = false; }
+		}
 	}
+	else
+	{
+		resetUart();
+		while (currentCommandByte != '\n')
+		{ uartBuffer.Read(currentCommandByte); }
+
+		error = false;
+	}
+
+	if ((valueLenght == 0) && (uartPacket.getEndPacket == true) && (uartPacket.getValue == true))
+	{ error = true;
+	Send_String(&huart1,(char *)("ERROR: Empty Value\n")); }
 //--------------------------------------------------------------
 	if (uartPacket.getEndPacket)
 	{
 		uartPacket.command[0] = commandBuf[0];
 		uartPacket.command[1] = commandBuf[1];
+
 //--------------------------------------------------------------
+
 		switch (uartPacket.cAxis)
 		{
-			case 'X':	uartPacket.iAxis = 0; 	break;
-			case 'Y':	uartPacket.iAxis = 1;	break;
-			case 'Z':	uartPacket.iAxis = 2;	break;
-			case 'W':	uartPacket.iAxis = 3;	break;
-			case 'E':	uartPacket.iAxis = 4;	break;
-			case 'F':	uartPacket.iAxis = 5;	break;
-			case 'G':	uartPacket.iAxis = 6;	break;
-			case 'H':	uartPacket.iAxis = 7;	break;
-			case 'U':	uartPacket.iAxis = 8;	break;
-			case 'V':	uartPacket.iAxis = 9;	break;
+		case 'X':	uartPacket.iAxis = 0; 	wrongBoardID = (boardID == 1) ? false : true;  		break;
+		case 'Y':	uartPacket.iAxis = 1; 	wrongBoardID = (boardID == 1) ? false : true;		break;
+		case 'Z':	uartPacket.iAxis = 2; 	wrongBoardID = (boardID == 2) ? false : true;		break;
+		case 'W':	uartPacket.iAxis = 3; 	wrongBoardID = (boardID == 2) ? false : true;		break;
+		case 'E':	uartPacket.iAxis = 4; 	wrongBoardID = (boardID == 3) ? false : true;		break;
+		case 'F':	uartPacket.iAxis = 5; 	wrongBoardID = (boardID == 3) ? false : true;		break;
+		case 'G':	uartPacket.iAxis = 6; 	wrongBoardID = (boardID == 4) ? false : true;		break;
+		case 'H':	uartPacket.iAxis = 7; 	wrongBoardID = (boardID == 4) ? false : true;		break;
+		case 'U':	uartPacket.iAxis = 8; 	wrongBoardID = (boardID == 5) ? false : true;		break;
+		case 'V':	uartPacket.iAxis = 9; 	wrongBoardID = (boardID == 5) ? false : true;		break;
 
-			case 'B':	uartPacket.command[2] = uartPacket.command[1];
-						uartPacket.command[1] = uartPacket.command[0];
-						uartPacket.command[0] = 'B';
+		case 'B':	uartPacket.command[2] = commandBuf[1];
+					uartPacket.command[1] = commandBuf[0];
+					uartPacket.command[0] = 'B';
+					wrongBoardID = false; 														break;
 
-			default:	error = true;
+		default:	error = true;
+					Send_String(&huart1,(char *)("ERROR: Wrong Axis\n"));
 		}
+
+		if (wrongBoardID == true)
+		{ Send_String(&huart1,(char *)("ERROR: Wrong Board & Axis\n")); }
+
 //--------------------------------------------------------------
-		if ((uartPacket.getValue) && ((strncmp(uartPacket.command,MOTOR_IMPULSE_PER_SI_UNIT, 0x2) == 0)
-								  ||(strncmp(uartPacket.command,ENCODER_COUNTS_PER_SI_UNIT, 0x2) == 0)))
+
+		if ((wrongBoardID == false) && (error == false))
 		{
-			int pointLocation = 0;
-			uartPacket.dValue = double(0);
-
-			for (int i = valueLenght; i > 0; i--)
+//--------------------------------------------------------------
+			if ((uartPacket.getValue) && ((strncmp(uartPacket.command,MOTOR_IMPULSE_PER_SI_UNIT, 0x2) == 0)
+					|| (strncmp(uartPacket.command,ENCODER_COUNTS_PER_SI_UNIT, 0x2) == 0)))
 			{
-				if (valueBuf[i-1] != '.') { pointLocation++; }
-			}
+				int pointLocation = 0;
+				uartPacket.dValue = double(0);
 
-			int j=10;
-			for (int i = (valueLenght-pointLocation); i > valueLenght; i++)
-			{
-				uartPacket.dValue = uartPacket.dValue + ((valueBuf[i] - '0')/j);
-				j*=10;
-			}
+				for (int i = valueLenght; i > 0; i--)
+				{ if (valueBuf[i-1] != '.') { pointLocation++; } }
 
-			j=1;
-			for (int i = (valueLenght-pointLocation-2); i > 0; i--)
-			{
-				uartPacket.dValue = uartPacket.dValue + ((valueBuf[i] - '0')*j);
-				j*=10;
+				int j=10;
+				for (int i = (valueLenght-pointLocation); i > valueLenght; i++)
+				{
+					uartPacket.dValue = uartPacket.dValue + ((valueBuf[i] - '0')/j);
+					j*=10;
+				}
+
+				j=1;
+				for (int i = (valueLenght-pointLocation-2); i > 0; i--)
+				{
+					uartPacket.dValue = uartPacket.dValue + ((valueBuf[i] - '0')*j);
+					j*=10;
+				}
 			}
+			else if (uartPacket.getValue)
+			{
+				int j = 1;
+				uartPacket.iValue = 0;
+				int sign = 1;
+				for (int i = valueLenght; i > 0; i--)
+				{
+					if (valueBuf[i-1] == '-') {sign = -1;}
+					else
+					{
+						uartPacket.iValue = uartPacket.iValue + ((valueBuf[i-1] - '0')*j);
+						j*= 10;
+					}
+				}
+				uartPacket.iValue = uartPacket.iValue * sign;
+			}
+//--------------------------------------------
+			if (strncmp(uartPacket.command,BOARD_ID, 0x3) == 0)
+			{
+				if (uartPacket.getValue == false)
+				{
+					Send_String(&huart1,(char *)("BID="));
+					Send_String(&huart1,(char *)(__utoa(boardID, TEMP, 10)));
+					Send_String(&huart1,(char *)("\n"));
+				}
+				else
+				{ Send_String(&huart1,(char *)("ERROR: Needless Value\n")); }
+			}
+//--------------------------------------------
+			else if (strncmp(uartPacket.command,SWTICH_ON_AXIS, 0x2) == 0)
+			{
+				if (uartPacket.getValue)
+				{
+					(uartPacket.iValue >= 1) ? (uartPacket.iValue = 1) : (uartPacket.iValue = 0);
+					axis[uartPacket.iAxis].setTurnOnAxis(uartPacket.iValue);
+				}
+
+				Send_Char(&huart1,&uartPacket.cAxis);
+				Send_String(&huart1,(char *)("MO="));
+				Send_String(&huart1,(char *)(__utoa(axis[uartPacket.iAxis].getTurnOnAxis(), TEMP, 10)));
+				Send_String(&huart1,(char *)("\n"));
+			}
+//--------------------------------------------
+			else if (strncmp(uartPacket.command,MODE_MOTION, 0x2) == 0)
+			{
+				if (uartPacket.getValue)
+				{
+					(uartPacket.iValue >= 1) ? (uartPacket.iValue = 1) : (uartPacket.iValue = 0);
+					axis[uartPacket.iAxis].setModeMoving(uartPacket.iValue);
+				}
+
+				Send_Char(&huart1,&uartPacket.cAxis);
+				Send_String(&huart1,(char *)("MM="));
+				Send_String(&huart1,(char *)(__utoa(axis[uartPacket.iAxis].modeMoving(), TEMP, 10)));
+				Send_String(&huart1,(char *)("\n"));
+			}
+//--------------------------------------------
+			else if (strncmp(uartPacket.command,SPEED, 0x2) == 0)
+			{
+				if (uartPacket.getValue)
+				{
+					if (uartPacket.iValue >= 0)
+					{	axis[uartPacket.iAxis].setDirection(eDirection::Positive);
+					if (uartPacket.iValue >= 30000000) {uartPacket.iValue = 30000000;} 	}
+					else
+					{	axis[uartPacket.iAxis].setDirection(eDirection::Negative);
+					if (uartPacket.iValue <= -30000000) {uartPacket.iValue = -30000000;}	}
+
+					int32_t absIntValue = abs(uartPacket.iValue);
+					axis[uartPacket.iAxis].setSpeed(absIntValue);
+				}
+
+				Send_Char(&huart1,&uartPacket.cAxis);
+				Send_String(&huart1,(char *)("SP="));
+				if ((axis[uartPacket.iAxis].getDirection() == -1) && (axis[uartPacket.iAxis].getSpeed() != 0)) {Send_String(&huart1,(char *)("-"));}
+				Send_String(&huart1,(char *)(__utoa(axis[uartPacket.iAxis].getSpeed(), TEMP, 10)));
+				Send_String(&huart1,(char *)("\n"));
+			}
+//--------------------------------------------
+			else if (strncmp(uartPacket.command,ACCELERATION, 0x2) == 0)
+			{
+				if (uartPacket.getValue)
+				{
+					if (uartPacket.iValue >= 120000000) {uartPacket.iValue = 120000000;}
+					else if (uartPacket.iValue <= 0) {uartPacket.iValue = 0;}
+					axis[uartPacket.iAxis].setAcc(uartPacket.iValue);
+				}
+
+				Send_Char(&huart1,&uartPacket.cAxis);
+				Send_String(&huart1,(char *)("AC="));
+				Send_String(&huart1,(char *)(__utoa(axis[uartPacket.iAxis].getAcc(), TEMP, 10)));
+				Send_String(&huart1,(char *)("\n"));
+			}
+//--------------------------------------------
+			else if (strncmp(uartPacket.command,DECCELERATION, 0x2) == 0)
+			{
+				if (uartPacket.getValue)
+				{
+					if (uartPacket.iValue >= 120000000) {uartPacket.iValue = 120000000;}
+					else if (uartPacket.iValue <= 0) {uartPacket.iValue = 0;}
+					axis[uartPacket.iAxis].setDcc(uartPacket.iValue);
+				}
+
+				Send_Char(&huart1,&uartPacket.cAxis);
+				Send_String(&huart1,(char *)("DC="));
+				Send_String(&huart1,(char *)(__utoa(axis[uartPacket.iAxis].getDcc(), TEMP, 10)));
+				Send_String(&huart1,(char *)("\n"));
+			}
+//--------------------------------------------
+			else if (strncmp(uartPacket.command,BEGIN_MOVING, 0x2) == 0)
+			{
+				if (uartPacket.getValue == false)
+				{ axis[uartPacket.iAxis].begin(); }
+				else
+				{ Send_String(&huart1,(char *)("ERROR: Needless Value\n")); }
+			}
+//--------------------------------------------
+			else if (strncmp(uartPacket.command,STOP_MOVING, 0x2) == 0)
+			{
+				if (uartPacket.getValue == false)
+				{ axis[uartPacket.iAxis].stop(); }
+				else
+				{ Send_String(&huart1,(char *)("ERROR: Needless Value\n")); }
+			}
+//--------------------------------------------
+			else if (strncmp(uartPacket.command,EMERGENCY_STOP, 0x2) == 0)
+			{
+				if (uartPacket.getValue == false)
+				{ axis[uartPacket.iAxis].emgStop();
+				axis[uartPacket.iAxis].stop();	}
+				else
+				{ Send_String(&huart1,(char *)("ERROR: Needless Value\n")); }
+			}
+//--------------------------------------------
+			else if (strncmp(uartPacket.command,CURRENT_POSITION, 0x2) == 0)
+			{
+				if (uartPacket.getValue == true)
+				{ axis[uartPacket.iAxis].setPosition(uartPacket.iValue); }
+
+				Send_Char(&huart1,&uartPacket.cAxis);
+				Send_String(&huart1,(char *)("PS="));
+				if (axis[uartPacket.iAxis].getPosition() < 0) {Send_String(&huart1,(char *)("-"));}
+				Send_String(&huart1,(char *)(__utoa(abs(axis[uartPacket.iAxis].getPosition()), TEMP, 10)));
+				Send_String(&huart1,(char *)("\n"));
+			}
+//--------------------------------------------
+			else if (strncmp(uartPacket.command,LIMIT_STATUS, 0x2) == 0)
+			{
+				if (uartPacket.getValue == false)
+				{ Send_Char(&huart1,&uartPacket.cAxis);
+				Send_String(&huart1,(char *)("LS="));
+				Send_String(&huart1,(char *)(__utoa(axis[uartPacket.iAxis].getLimStatus(), TEMP, 10)));
+				Send_String(&huart1,(char *)("\n")); }
+				else
+				{ Send_String(&huart1,(char *)("ERROR: Needless Value\n")); }
+			}
+//--------------------------------------------
+			else if (strncmp(uartPacket.command,LIMIT_ENABLE, 0x2) == 0)
+			{
+				if (uartPacket.getValue)
+				{
+					if ((uartPacket.iValue > 7) || (uartPacket.iValue < 0))  { Send_String(&huart1,(char *)("ERROR: Wrong Value\n")); }
+					else {axis[uartPacket.iAxis].setEnableLim(uartPacket.iValue);}
+				}
+
+				Send_Char(&huart1,&uartPacket.cAxis);
+				Send_String(&huart1,(char *)("LE="));
+				Send_String(&huart1,(char *)(__utoa(axis[uartPacket.iAxis].getEnableLim(), TEMP, 10)));
+				Send_String(&huart1,(char *)("\n"));
+			}
+//--------------------------------------------
+			else if (strncmp(uartPacket.command,LIMIT_TRIGGER_LOGIC, 0x2) == 0)
+			{
+				if (uartPacket.getValue)
+				{
+					if ((uartPacket.iValue > 7) || (uartPacket.iValue < 0))  { Send_String(&huart1,(char *)("ERROR: Wrong Value\n")); }
+					else {axis[uartPacket.iAxis].setInverseLim(uartPacket.iValue);}
+				}
+
+				Send_Char(&huart1,&uartPacket.cAxis);
+				Send_String(&huart1,(char *)("LP="));
+				Send_String(&huart1,(char *)(__utoa(axis[uartPacket.iAxis].getInverseLim(), TEMP, 10)));
+				Send_String(&huart1,(char *)("\n"));
+			}
+//--------------------------------------------
+			else if (strncmp(uartPacket.command,INVERSE_ENCODER, 0x2) == 0)
+			{
+				if (uartPacket.getValue)
+				{
+					if (uartPacket.iValue >= 1) {uartPacket.iValue = 1;}
+					else if (uartPacket.iValue <= 0) {uartPacket.iValue = 0;}
+					axis[uartPacket.iAxis].setInverseEncoder(uartPacket.iValue);
+				}
+
+				Send_Char(&huart1,&uartPacket.cAxis);
+				Send_String(&huart1,(char *)("IE="));
+				Send_String(&huart1,(char *)(__utoa(axis[uartPacket.iAxis].getInverseEncoder(), TEMP, 10)));
+				Send_String(&huart1,(char *)("\n"));
+			}
+//--------------------------------------------
+			else if (strncmp(uartPacket.command,INVERSE_MOTOR_ROTATION, 0x2) == 0)
+			{
+				if (uartPacket.getValue)
+				{
+					if (uartPacket.iValue >= 1) {uartPacket.iValue = 1;}
+					else if (uartPacket.iValue <= 0) {uartPacket.iValue = 0;}
+					axis[uartPacket.iAxis].setInverseMotor(uartPacket.iValue);
+				}
+
+				Send_Char(&huart1,&uartPacket.cAxis);
+				Send_String(&huart1,(char *)("IM="));
+				Send_String(&huart1,(char *)(__utoa(axis[uartPacket.iAxis].getInverseMotor(), TEMP, 10)));
+				Send_String(&huart1,(char *)("\n"));
+			}
+//--------------------------------------------
+			else
+			{ Send_String(&huart1,(char *)("ERROR: Wrong Command\n")); }
 		}
-		else if (uartPacket.getValue)
-	  	{
-			int j = 1;
-			uartPacket.iValue = 0;
-			for (int i = valueLenght; i > 0; i--)
-			{
-				uartPacket.iValue = uartPacket.iValue + ((valueBuf[i-1] - '0')*j);
-				j*= 10;
-			}
-	  	}
-//--------------------------------------------
-					if (strncmp(uartPacket.command,BOARD_ID, 0x3) == 0)
-					{
-						Send_String(&huart1,(char *)("BID="));
-						Send_String(&huart1,(char *)(__utoa(boardID, TEMP, 10)));
-						Send_String(&huart1,(char *)("\n"));
-					}
-//--------------------------------------------
-					else if (strncmp(uartPacket.command,MODE_MOTION, 0x2) == 0)
-	  	    		{
-	  	    			if (uartPacket.getValue)
-	  	    			{
-	  	    				(uartPacket.iValue >= 1) ? (uartPacket.iValue = 1) : (uartPacket.iValue = 0);
-	  	    				axis[uartPacket.iAxis].setModeMoving(uartPacket.iValue);
-	  	    			}
-
-	  	    			Send_Char(&huart1,&uartPacket.cAxis);
-	  	    			Send_String(&huart1,(char *)("MM="));
-	  	    			Send_String(&huart1,(char *)(__utoa(axis[uartPacket.iAxis].modeMoving(), TEMP, 10)));
-	  	    			Send_String(&huart1,(char *)("\n"));
-	  	    		}
-//--------------------------------------------
-	  	    		else if (strncmp(uartPacket.command,SPEED, 0x2) == 0)
-	  	    		{
-	  	    			if (uartPacket.getValue)
-	  	    			{
-							if (uartPacket.iValue >= 0)
-							{	axis[uartPacket.iAxis].setDirection(eDirection::Positive);
-								if (uartPacket.iValue >= 30000000) {uartPacket.iValue = 30000000;} 	}
-							else
-							{	axis[uartPacket.iAxis].setDirection(eDirection::Negative);
-								if (uartPacket.iValue <= -30000000) {uartPacket.iValue = -30000000;}	}
-
-								int32_t absIntValue = abs(uartPacket.iValue);
-								axis[uartPacket.iAxis].setSpeed(absIntValue);
-	  	    			}
-
-						Send_Char(&huart1,&uartPacket.cAxis);
-		  	    		Send_String(&huart1,(char *)("SP="));
-		  	    		Send_String(&huart1,(char *)(__utoa(axis[uartPacket.iAxis].getSpeed(), TEMP, 10)));
-		  	    		Send_String(&huart1,(char *)("\n"));
-	  	    		}
-//--------------------------------------------
-	  	    		else if (strncmp(uartPacket.command,ACCELERATION, 0x2) == 0)
-	  	    		{
-	  	    			if (uartPacket.getValue)
-	  	    			{
-							if (uartPacket.iValue >= 120000000) {uartPacket.iValue = 120000000;}
-							else if (uartPacket.iValue <= 0) {uartPacket.iValue = 0;}
-							axis[uartPacket.iAxis].setAcc(uartPacket.iValue);
-	  	    			}
-
-	  	    			Send_Char(&huart1,&uartPacket.cAxis);
-		  	    		Send_String(&huart1,(char *)("AC="));
-		  	    		Send_String(&huart1,(char *)(__utoa(axis[uartPacket.iAxis].getAcc(), TEMP, 10)));
-		  	    		Send_String(&huart1,(char *)("\n"));
-	  	    		}
-//--------------------------------------------
-	  	    		else if (strncmp(uartPacket.command,DECCELERATION, 0x2) == 0)
-	  	    		{
-	  	    			if (uartPacket.getValue)
-	  	    			{
-	  	    				if (uartPacket.iValue >= 120000000) {uartPacket.iValue = 120000000;}
-	  	    				else if (uartPacket.iValue <= 0) {uartPacket.iValue = 0;}
-	  	    				axis[uartPacket.iAxis].setDcc(uartPacket.iValue);
-	  	    			}
-
-	  	    			Send_Char(&huart1,&uartPacket.cAxis);
-		  	    		Send_String(&huart1,(char *)("DC="));
-		  	    		Send_String(&huart1,(char *)(__utoa(axis[uartPacket.iAxis].getDcc(), TEMP, 10)));
-		  	    		Send_String(&huart1,(char *)("\n"));
-	  	    		}
-//--------------------------------------------
-	  	    		else if (strncmp(uartPacket.command,BEGIN_MOVING, 0x2) == 0)
-	  	    		{
-	  	    			if (uartPacket.getValue == false)
-	  	    			{ axis[uartPacket.iAxis].begin(); }
-	  	    			else
-	  	    			{ Send_String(&huart1,(char *)("ERR\n")); }
-	  	    		}
-//--------------------------------------------
-	  	    		else if (strncmp(uartPacket.command,STOP_MOVING, 0x2) == 0)
-	  	    		{
-	  	    			if (uartPacket.getValue == false)
-	  	    			{ axis[uartPacket.iAxis].stop(); }
-	  	    			else
-	  	    			{ Send_String(&huart1,(char *)("ERR\n")); }
-	  	    		}
-//--------------------------------------------
-					else if (strncmp(uartPacket.command,CURRENT_POSITION, 0x2) == 0)
-					{
-						if (uartPacket.getValue == true)
-						{ axis[uartPacket.iAxis].setPosition(uartPacket.iValue); }
-
-						Send_Char(&huart1,&uartPacket.cAxis);
-					    Send_String(&huart1,(char *)("PS="));
-					    Send_String(&huart1,(char *)(__utoa(axis[uartPacket.iAxis].getPosition(), TEMP, 10)));
-					    Send_String(&huart1,(char *)("\n"));
-					}
-//--------------------------------------------
-					else if (strncmp(uartPacket.command,LIMIT_STATUS, 0x2) == 0)
-					{
-						if (uartPacket.getValue == false)
-						{ Send_Char(&huart1,&uartPacket.cAxis);
-		  	    		  Send_String(&huart1,(char *)("LS="));
-		  	    		  Send_String(&huart1,(char *)(__utoa(axis[uartPacket.iAxis].getLimStatus(), TEMP, 10)));
-		  	    		  Send_String(&huart1,(char *)("\n")); }
-						else
-						{ Send_String(&huart1,(char *)("ERR\n")); }
-					}
-//--------------------------------------------
-
-	  	    		else
-	  	    		{ Send_String(&huart1,(char *)("ERR\n")); }
 
 //---------------------------------------- RESTART -----------------------------------------
 
-	  	    		for (int i = commandLenght + 1; i != 0; i--)
-	  	    		{ commandBuf[i] = 0; }
+		resetUart();
+	}
+}
 
-	  	    		RunCommand = false;
-	  	    		commandLenght = 0;
-	  	    		valueLenght = 0;
-	  	    		getValue = false;
-	  	    		getAxis = false;
+void resetUart()
+{
+	for (int i = commandLenght + 1; i!=0; i--)
+	{ commandBuf[i-1] = 0; }
 
-	  	    		uartPacket.getEndPacket = false;
-	  	    		uartPacket.getAxis = false;
-	  	    		uartPacket.getCommand = false;
-	  	    		uartPacket.getValue = false;
-	  	    		uartPacket.getArrayIndex = false;
-	  	    		__HAL_TIM_SET_COUNTER(&timeoutTim, 0x0000);
-	  	    	}
+	RunCommand = false;
+	commandLenght = 0;
+	valueLenght = 0;
+	getValue = false;
+	getAxis = false;
+
+	uartPacket.getEndPacket = false;
+	uartPacket.getAxis = false;
+	uartPacket.getCommand = false;
+	uartPacket.getValue = false;
+	uartPacket.getArrayIndex = false;
+	__HAL_TIM_SET_COUNTER(&timeoutTim, 0x0000);
+	error = false;
+	checkingTimeError = false;
 }
 
 void Send_String (UART_HandleTypeDef *huart, char _out[])
-	{
-		HAL_UART_Transmit (huart, (uint8_t*) _out, strlen(_out), 2000);
-	}
+	{ HAL_UART_Transmit (huart, (uint8_t*) _out, strlen(_out), 2000); }
 
 void Send_Char (UART_HandleTypeDef *huart, char* _out)
-	{
-		HAL_UART_Transmit (huart, (uint8_t*) _out, 1, 2000);
-	}
+	{ HAL_UART_Transmit (huart, (uint8_t*) _out, 1, 2000); }
 
 void TIM4_IRQHandler(void) // прерывание раз в 2 секунды
 {
-//	if (checkingTimeError == true)
-//	{	error = true;
-//		Send_String(&huart1,(char *)("Error Time")); }
+	if (checkingTimeError == true)
+	{	error = true;
+		Send_String(&huart1,(char *)("ERROR: Time Over")); }
 
-	if (axis[uartPacket.iAxis].beginMoving() == true)
-	{	axis[uartPacket.iAxis].stop();
-		__HAL_TIM_SET_COUNTER(&timeoutTim, 0x0000);}
+//	if (axis[uartPacket.iAxis].beginMoving() == true)
+//	{	axis[uartPacket.iAxis].stop();
+//		__HAL_TIM_SET_COUNTER(&timeoutTim, 0x0000);}
 
 	HAL_TIM_IRQHandler(&timeoutTim);
 }

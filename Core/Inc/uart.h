@@ -25,7 +25,7 @@ struct Packet
 {
 	char cAxis;
 	uint8_t iAxis;
-	char command[2] = {};
+	char command[3] = {};
 	int arrayIndex = 0;
 	bool arrayCommand = false;
 	double dValue = 0;
@@ -41,6 +41,7 @@ struct Packet
 void initUart();
 void USART1_IRQHandler(void);
 void checkUARTbuffer();
+void resetUart();
 void Send_String (UART_HandleTypeDef *huart, char _out[]);
 void Send_Char (UART_HandleTypeDef *huart, char* _out);
 void TIM4_IRQHandler(void);
